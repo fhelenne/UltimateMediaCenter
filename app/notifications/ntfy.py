@@ -14,7 +14,7 @@ async def send(title: str, body: str) -> None:
             response = await client.post(
                 url,
                 content=body,
-                headers={"Title": title},
+                headers=[(b"Title", title.encode("utf-8"))],
                 timeout=5.0,
             )
             response.raise_for_status()
