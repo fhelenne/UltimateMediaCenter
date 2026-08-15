@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ntfy
+    restart: unless-stopped
+
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    command: serve
+    environment:
+      - NTFY_BASE_URL=http://localhost
+    ports:
+      - "8080:80"
+    volumes:
+      - ntfy-data:/var/cache/ntfy
+      - ntfy-etc:/etc/ntfy
+    restart: unless-stopped
+
+volumes:
+  ntfy-data:
+  ntfy-etc:
