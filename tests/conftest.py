@@ -5,12 +5,14 @@ os.environ["NTFY_TOPIC"] = "test"
 os.environ["SONARR_SECRET"] = "test-secret"
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture
 async def client() -> AsyncClient:
     from app.main import app
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
         yield c
