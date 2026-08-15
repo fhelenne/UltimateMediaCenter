@@ -3,6 +3,9 @@ import os
 os.environ["NTFY_URL"] = "http://ntfy-test:80"
 os.environ["NTFY_TOPIC"] = "test"
 os.environ["SONARR_SECRET"] = "test-secret"
+os.environ["RADARR_SECRET"] = "test-secret"
+os.environ["LIDARR_SECRET"] = "test-secret"
+os.environ["READARR_SECRET"] = "test-secret"
 
 import pytest
 from httpx import ASGITransport, AsyncClient
