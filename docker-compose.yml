@@ -34,9 +34,60 @@ services:
       - sonarr-downloads:/downloads
     restart: unless-stopped
 
+  radarr:
+    image: linuxserver/radarr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    ports:
+      - "7878:7878"
+    volumes:
+      - radarr-config:/config
+      - radarr-movies:/movies
+      - radarr-downloads:/downloads
+    restart: unless-stopped
+
+  lidarr:
+    image: linuxserver/lidarr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    ports:
+      - "8686:8686"
+    volumes:
+      - lidarr-config:/config
+      - lidarr-music:/music
+      - lidarr-downloads:/downloads
+    restart: unless-stopped
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    ports:
+      - "8787:8787"
+    volumes:
+      - readarr-config:/config
+      - readarr-books:/books
+      - readarr-downloads:/downloads
+    restart: unless-stopped
+
 volumes:
   ntfy-data:
   ntfy-etc:
   sonarr-config:
   sonarr-tv:
   sonarr-downloads:
+  radarr-config:
+  radarr-movies:
+  radarr-downloads:
+  lidarr-config:
+  lidarr-music:
+  lidarr-downloads:
+  readarr-config:
+  readarr-books:
+  readarr-downloads:
