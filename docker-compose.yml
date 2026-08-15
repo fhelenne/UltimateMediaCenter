@@ -20,6 +20,23 @@ services:
       - ntfy-etc:/etc/ntfy
     restart: unless-stopped
 
+  sonarr:
+    image: linuxserver/sonarr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    ports:
+      - "8989:8989"
+    volumes:
+      - sonarr-config:/config
+      - sonarr-tv:/tv
+      - sonarr-downloads:/downloads
+    restart: unless-stopped
+
 volumes:
   ntfy-data:
   ntfy-etc:
+  sonarr-config:
+  sonarr-tv:
+  sonarr-downloads:
