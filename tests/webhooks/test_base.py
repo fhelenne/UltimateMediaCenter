@@ -53,3 +53,54 @@ async def test_ntfy_error_still_returns_ok(monkeypatch):
     monkeypatch.setattr("app.notifications.ntfy.send", _fail)
     result = await handle_webhook(_Event(eventType="Download"), SECRET, SECRET, _fmt)
     assert result == {"status": "ok"}
+
+
+async def test_on_download_extra_called_on_download():
+    calls = []
+
+    async def _extra(event):
+        calls.append(event)
+
+    with respx.mock:
+        respx.post("http://ntfy-test:80/test").mock(return_value=httpx.Response(200))
+        await handle_webhook(
+            _Event(eventType="Download"), SECRET, SECRET, _fmt, on_download_extra=_extra
+        )
+    assert len(calls) == 1
+
+
+async def test_on_download_extra_not_called_on_test_event():
+    calls = []
+
+    async def _extra(event):
+        calls.append(event)
+
+    await handle_webhook(
+        _Event(eventType="Test"), SECRET, SECRET, _fmt, on_download_extra=_extra
+    )
+    assert calls == []
+
+
+async def test_on_download_extra_not_called_on_wrong_secret():
+    calls = []
+
+    async def _extra(event):
+        calls.append(event)
+
+    with pytest.raises(HTTPException):
+        await handle_webhook(
+            _Event(eventType="Download"), "wrong", SECRET, _fmt, on_download_extra=_extra
+        )
+    assert calls == []
+
+
+async def test_on_download_extra_error_does_not_fail_webhook(monkeypatch):
+    async def _extra(event):
+        raise RuntimeError("boom")
+
+    with respx.mock:
+        respx.post("http://ntfy-test:80/test").mock(return_value=httpx.Response(200))
+        result = await handle_webhook(
+            _Event(eventType="Download"), SECRET, SECRET, _fmt, on_download_extra=_extra
+        )
+    assert result == {"status": "ok"}
