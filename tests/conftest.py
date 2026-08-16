@@ -17,6 +17,7 @@ os.environ["READARR_API_KEY"] = "test-api-key"
 os.environ["JELLYFIN_URL"] = "http://jellyfin-test:8096"
 os.environ["JELLYFIN_API_KEY"] = "test-api-key"
 os.environ["DB_PATH"] = ":memory:"
+os.environ["CALIBRE_LIBRARY_PATH"] = "/test/library"
 
 import pytest
 from httpx import ASGITransport, AsyncClient

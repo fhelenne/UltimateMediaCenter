@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     jellyfin_api_key: str
     cache_ttl: int = 30
     db_path: str = "data/cache.db"
+    calibre_library_path: str = "data/calibre-library"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
