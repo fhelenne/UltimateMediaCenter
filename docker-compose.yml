@@ -6,6 +6,8 @@ services:
       - "8000:8000"
     depends_on:
       - ntfy
+    volumes:
+      - app-data:/app/data
     restart: unless-stopped
 
   ntfy:
@@ -77,6 +79,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  app-data:
   ntfy-data:
   ntfy-etc:
   sonarr-config:
