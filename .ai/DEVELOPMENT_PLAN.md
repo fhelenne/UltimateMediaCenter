@@ -21,9 +21,9 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
 - [ ] Adaptateur de notif interchangeable (ntfy/Telegram/Gotify)
 
 ## Phase 3 — Orchestrateur + UI unifiée
-- [ ] Client API pour chaque *arr (lecture seule au départ : liste, statut)
-- [ ] UI listant les médias suivis avec statut agrégé
-- [ ] Cache court pour limiter les appels aux *arr
+- [x] Client API pour chaque *arr (lecture seule au départ : liste, statut)
+- [x] UI listant les médias suivis avec statut agrégé
+- [x] Cache court pour limiter les appels aux *arr
 
 ## Phase 4 — Re-match manuel
 - [ ] Action UI → Manual Import côté *arr concerné
