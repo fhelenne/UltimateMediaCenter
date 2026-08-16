@@ -1,0 +1,73 @@
+graph TB
+    subgraph RPI["Raspberry Pi 3 B+"]
+        subgraph APP["Ton appli (FastAPI)"]
+            UI[Interface web unifiée<br/>Films / Séries / Musique / Ebooks]
+            WH[Endpoint webhooks<br/>/webhook/sonarr<br/>/webhook/radarr<br/>/webhook/lidarr<br/>/webhook/readarr]
+            NOTIF[Module notifications]
+            UI -.appelle API.-> ORCH
+            ORCH[Orchestrateur<br/>agrège statuts & médias]
+        end
+
+        JELLY[Jellyfin<br/>streaming/lecture]
+        CALIBRE[Calibre-web<br/>pont protocole seul<br/>/kobo + /opds — /web bloqué]
+        NTFY[ntfy<br/>service de notif self-hosted]
+    end
+
+    subgraph ARR["Services *arr (Pi ou machine séparée)"]
+        SONARR[Sonarr<br/>séries]
+        RADARR[Radarr<br/>films]
+        LIDARR[Lidarr<br/>musique]
+        READARR[Readarr<br/>ebooks]
+    end
+
+    CALIBREDB[calibredb / fetch-ebook-metadata<br/>scan + enrichissement + organisation]
+    STORAGE[(Disque dur USB<br/>bibliothèque médias)]
+    TEL[Téléphone / navigateur<br/>notifs + accès UI]
+    KOBO[Liseuse Kobo]
+    INDEX[Indexeurs<br/>torrent/usenet]
+
+    SONARR -->|nouvel épisode détecté| WH
+    RADARR -->|nouveau film détecté| WH
+    LIDARR -->|nouvel album détecté| WH
+    READARR -->|nouvel ebook détecté| WH
+
+    WH --> NOTIF
+    NOTIF -->|push| NTFY
+    NTFY -->|notification| TEL
+
+    ORCH -->|requêtes API statut/recherche| SONARR
+    ORCH -->|requêtes API statut/recherche| RADARR
+    ORCH -->|requêtes API statut/recherche| LIDARR
+    ORCH -->|requêtes API statut/recherche| READARR
+
+    SONARR --> INDEX
+    RADARR --> INDEX
+    LIDARR --> INDEX
+    READARR --> INDEX
+
+    SONARR --> STORAGE
+    RADARR --> STORAGE
+    LIDARR --> STORAGE
+    READARR --> CALIBREDB
+    CALIBREDB --> STORAGE
+    JELLY --> STORAGE
+    CALIBRE -.lecture seule.-> STORAGE
+    KOBO -->|sync Kobo API<br/>simulée| CALIBRE
+
+    UI -->|lecture vidéo/audio| JELLY
+    UI -->|/kobo + /opds seulement| CALIBRE
+    JELLY -->|stream| TEL
+    UI -->|accès web| TEL
+
+    REMATCH[Bouton Re-matcher<br/>dans l'UI]
+    UI --> REMATCH
+    REMATCH -->|force nouvelle recherche<br/>Manual Import| SONARR
+    REMATCH -->|force nouvelle recherche<br/>Manual Import| RADARR
+    REMATCH -->|force nouvelle recherche<br/>Manual Import| LIDARR
+    REMATCH -->|force nouvelle recherche<br/>Manual Import| READARR
+    REMATCH -.désactive lecture<br/>metas locales.-> JELLY
+
+    style REMATCH fill:#fde8e8
+    style APP fill:#e8f0fe
+    style ARR fill:#fef3e8
+    style RPI fill:#f5f5f5
