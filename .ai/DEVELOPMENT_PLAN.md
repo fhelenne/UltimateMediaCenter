@@ -26,9 +26,9 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
 - [x] Cache court pour limiter les appels aux *arr
 
 ## Phase 4 — Re-match manuel
-- [ ] Action UI → Manual Import côté *arr concerné
-- [ ] Toggle metadata locale Jellyfin via son API
-- [ ] Tests couvrant les cas d'erreur (mauvais type de média, *arr injoignable)
+- [x] Action UI → Manual Import côté *arr concerné
+- [x] Toggle metadata locale Jellyfin via son API
+- [x] Tests couvrant les cas d'erreur (mauvais type de média, *arr injoignable)
 
 ## Phase 5 — Intégration lecture
 - [ ] Intégration Jellyfin dans l'UI (lien direct ou embed du player)
