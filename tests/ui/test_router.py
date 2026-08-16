@@ -101,6 +101,21 @@ async def test_rematch_post_applies_chosen_candidate(client: AsyncClient, monkey
     assert "succ" in response.text.lower()
 
 
+async def test_rematch_post_negative_candidate_index_shows_error(
+    client: AsyncClient, monkeypatch
+):
+    async def _candidates(arr, item):
+        return [{"path": "/data/movies/Inception.mkv"}]
+
+    monkeypatch.setattr("app.rematch.rematch.candidates", _candidates)
+    response = await client.post(
+        "/rematch/radarr/1",
+        data={"path": "/data/movies/Inception", "title": "Inception", "candidate_index": "-1"},
+    )
+    assert response.status_code == 200
+    assert "Échec" in response.text
+
+
 async def test_rematch_post_arr_failure_shows_error(client: AsyncClient, monkeypatch):
     async def _candidates(arr, item):
         return [{"path": "/data/movies/Inception.mkv"}]

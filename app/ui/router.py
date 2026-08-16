@@ -95,7 +95,7 @@ async def rematch_apply(
         return HTMLResponse("Not found", status_code=404)
     item = {"path": path, "title": title}
     result = await rematch.candidates(arr, item)
-    if result is None or candidate_index >= len(result):
+    if result is None or candidate_index < 0 or candidate_index >= len(result):
         return templates.TemplateResponse(request, "_rematch_result.html", {"success": False})
     chosen = result[candidate_index]
     success = await rematch.apply(arr, item, chosen)
