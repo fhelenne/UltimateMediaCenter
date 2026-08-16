@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     lidarr_api_key: str
     readarr_url: str
     readarr_api_key: str
+    jellyfin_url: str
+    jellyfin_api_key: str
     cache_ttl: int = 30
     db_path: str = "data/cache.db"
 

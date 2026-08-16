@@ -14,6 +14,8 @@ os.environ["LIDARR_URL"] = "http://lidarr-test:8686"
 os.environ["LIDARR_API_KEY"] = "test-api-key"
 os.environ["READARR_URL"] = "http://readarr-test:8787"
 os.environ["READARR_API_KEY"] = "test-api-key"
+os.environ["JELLYFIN_URL"] = "http://jellyfin-test:8096"
+os.environ["JELLYFIN_API_KEY"] = "test-api-key"
 os.environ["DB_PATH"] = ":memory:"
 
 import pytest
