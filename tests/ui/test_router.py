@@ -55,6 +55,20 @@ async def test_tab_service_unavailable(client: AsyncClient, monkeypatch):
     assert "Service indisponible" in response.text
 
 
+async def test_tab_shows_rematch_button(client: AsyncClient, monkeypatch):
+    async def _queue():
+        return []
+
+    async def _library():
+        return [{"id": 42, "title": "Inception", "path": "/data/movies/Inception", "monitored": True}]
+
+    monkeypatch.setattr("app.arr.sonarr.queue", _queue)
+    monkeypatch.setattr("app.arr.sonarr.library", _library)
+    response = await client.get("/tab/sonarr")
+    assert response.status_code == 200
+    assert "/rematch/sonarr/42" in response.text
+
+
 async def test_rematch_get_returns_candidates(client: AsyncClient, monkeypatch):
     async def _candidates(arr, item):
         return [{"path": "/data/movies/Inception.mkv"}]

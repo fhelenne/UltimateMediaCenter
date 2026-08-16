@@ -28,13 +28,20 @@
     {% if library %}
     <table>
         <thead>
-            <tr><th>Titre</th><th>Suivi</th></tr>
+            <tr><th>Titre</th><th>Suivi</th><th>Actions</th></tr>
         </thead>
         <tbody>
             {% for item in library %}
             <tr>
                 <td>{{ item.get("title") or item.get("artistName", "—") }}</td>
                 <td>{{ "✓" if item.get("monitored") else "✗" }}</td>
+                <td>
+                    <button
+                        hx-get="/rematch/{{ arr }}/{{ item.get('id') }}?path={{ item.get('path', '') | urlencode }}&title={{ (item.get('title') or item.get('artistName', '')) | urlencode }}"
+                        hx-target="#rematch-modal">
+                        Re-match
+                    </button>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -59,5 +66,7 @@
     <p>Aucun élément.</p>
     {% endif %}
 </section>
+
+<div id="rematch-modal"></div>
 
 {% endif %}
