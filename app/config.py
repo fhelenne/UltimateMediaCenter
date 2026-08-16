@@ -8,6 +8,16 @@ class Settings(BaseSettings):
     radarr_secret: str
     lidarr_secret: str
     readarr_secret: str
+    sonarr_url: str
+    sonarr_api_key: str
+    radarr_url: str
+    radarr_api_key: str
+    lidarr_url: str
+    lidarr_api_key: str
+    readarr_url: str
+    readarr_api_key: str
+    cache_ttl: int = 30
+    db_path: str = "data/cache.db"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
