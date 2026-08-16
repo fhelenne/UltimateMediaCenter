@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>UltimateMediaCenter</h1>
+<nav>
+    <ul>
+        {% for arr, label in tabs %}
+        <li>
+            <a href="#"
+               hx-get="/tab/{{ arr }}"
+               hx-target="#tab-content"
+               hx-push-url="/?tab={{ arr }}">
+                {{ label }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+<div id="tab-content"
+     hx-get="/tab/sonarr"
+     hx-trigger="load">
+    Chargement…
+</div>
+{% endblock %}

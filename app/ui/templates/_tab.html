@@ -1,0 +1,63 @@
+{% if error %}
+<p><strong>Service indisponible.</strong></p>
+{% else %}
+
+<section>
+    <h2>Queue active</h2>
+    {% if queue %}
+    <table>
+        <thead>
+            <tr><th>Titre</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+            {% for item in queue %}
+            <tr>
+                <td>{{ item.get("title", "—") }}</td>
+                <td>{{ item.get("status", "—") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucun téléchargement en cours.</p>
+    {% endif %}
+</section>
+
+<section>
+    <h2>Bibliothèque</h2>
+    {% if library %}
+    <table>
+        <thead>
+            <tr><th>Titre</th><th>Suivi</th></tr>
+        </thead>
+        <tbody>
+            {% for item in library %}
+            <tr>
+                <td>{{ item.get("title") or item.get("artistName", "—") }}</td>
+                <td>{{ "✓" if item.get("monitored") else "✗" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <nav>
+        {% if page > 1 %}
+        <a href="#"
+           hx-get="/tab/{{ arr }}?page={{ page - 1 }}"
+           hx-target="#tab-content">
+            ← Précédent
+        </a>
+        {% endif %}
+        {% if has_next %}
+        <a href="#"
+           hx-get="/tab/{{ arr }}?page={{ page + 1 }}"
+           hx-target="#tab-content">
+            Suivant →
+        </a>
+        {% endif %}
+    </nav>
+    {% else %}
+    <p>Aucun élément.</p>
+    {% endif %}
+</section>
+
+{% endif %}
