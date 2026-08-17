@@ -44,7 +44,10 @@ Le script `install.sh` doit :
 1. Vérifier/installer Docker + Docker Compose plugin
 2. Récupérer `docker-compose.yml` + configs par défaut (repo ou release taguée,
    jamais `main` en prod pour éviter une install cassée par un commit en cours)
-3. Générer un `.env` avec secrets aléatoires (mots de passe *arr, token webhook)
+3. Générer un `.env` avec secrets aléatoires (mots de passe *arr, token webhook,
+   `SESSION_SECRET`) — une valeur réelle générée à l'install, jamais laissée à
+   `changeme` : l'appli refuse de démarrer si `SESSION_SECRET` vaut `changeme`
+   ou est vide
 4. Créer le compte `admin` OAuth avec mot de passe aléatoire, affiché une
    seule fois en fin d'install (cf. ADR 0002) — changement obligatoire à la
    première connexion

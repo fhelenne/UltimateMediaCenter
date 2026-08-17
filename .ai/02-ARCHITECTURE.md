@@ -29,6 +29,12 @@ ntfy/Gotify/Telegram (adaptateur interchangeable).
 Déclenche un Manual Import côté *arr concerné, bascule les paramètres
 metadata Jellyfin (ignorer fichiers locaux) via son API.
 
+### 5. Authentification
+Session cookie signée (via `itsdangerous`, Starlette `SessionMiddleware`) sur
+un compte admin unique, table `users` dans le même fichier SQLite que le
+cache de l'orchestrateur. Protège toutes les routes UI ; les webhooks en sont
+exclus (authentification propre par secret partagé, cf. ADR 0002).
+
 ## Flux de données principaux
 1. Dépôt fichier → *arr scanne → matche → notifie ton appli (webhook) → notif push
 2. Utilisateur ouvre l'UI → orchestrateur interroge les *arr → affichage unifié

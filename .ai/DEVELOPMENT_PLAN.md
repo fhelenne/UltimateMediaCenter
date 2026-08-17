@@ -40,8 +40,8 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
       appareil — action manuelle, hors script d'installation)
 
 ## Phase 6 — Durcissement
-- [x] Authentification OAuth + compte admin par défaut, changement de mot de
-      passe forcé à la première connexion (ADR 0002)
+- [x] Authentification par session cookie + compte admin par défaut, changement
+      de mot de passe forcé à la première connexion (ADR 0002)
 - [ ] Image Docker de l'appli en Alpine multi-stage, nettoyée, < 150 Mo (ADR 0003)
 - [ ] Sauvegardes automatisées (config *arr, DB app)
 - [ ] Script d'installation one-liner (`install.sh`), idempotent, testé sur

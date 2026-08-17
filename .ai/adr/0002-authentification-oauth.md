@@ -27,10 +27,20 @@ manuelle de création de compte avant de pouvoir se connecter.
 d'install). À la première connexion, changement de mot de passe **obligatoire**
 avant tout accès au reste de l'application.
 
+> **Correctif (Phase 6a, implémentation)** : le terme « OAuth » ci-dessus
+> décrivait l'intention initiale, pas le flux réellement implémenté. En
+> pratique, pour une appli mono-utilisateur strictement locale, un vrai flux
+> OAuth2 (grant, tokens, provider) n'apportait rien — c'est une session
+> cookie signée (Starlette `SessionMiddleware`, cookie de session serveur,
+> pas de token porteur) qui a été retenue. Le principe de la décision (compte
+> admin auto-créé, changement de mot de passe forcé à la première connexion)
+> reste inchangé, seul le mécanisme de session diffère de la description
+> d'origine.
+
 ## Conséquences
 - Le script `install.sh` génère le mot de passe admin initial et l'écrit dans
   les logs d'install (cf. `05-DEPLOYMENT.md`), jamais en clair dans `.env` versionné
-- Endpoint `/auth/first-login` : force la redirection tant que le flag
+- Endpoint `/auth/change-password` : force la redirection tant que le flag
   `must_change_password` est vrai en base
 - Tests dédiés : connexion avec mot de passe par défaut → redirection forcée ;
   tentative de contournement direct d'une route protégée → refusée
@@ -39,3 +49,7 @@ avant tout accès au reste de l'application.
 ## Suivi
 - Détail technique (bibliothèque OAuth précise, stockage des tokens) à
   préciser en Phase 1, pas figé par cet ADR
+- Décision technique complète de l'implémentation (session cookie signée
+  plutôt qu'OAuth2, scrypt plutôt que bcrypt pour le hash, stockage de la
+  session côté cookie uniquement, etc.) :
+  `docs/superpowers/specs/2026-08-17-phase6-auth-design.md`
