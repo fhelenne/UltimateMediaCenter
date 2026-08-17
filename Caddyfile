@@ -1,0 +1,14 @@
+:80 {
+	handle /kobo/* {
+		reverse_proxy calibre-web:8083
+	}
+	handle /opds/* {
+		reverse_proxy calibre-web:8083
+	}
+	handle /web/* {
+		respond 404
+	}
+	handle {
+		reverse_proxy app:8000
+	}
+}

@@ -6,8 +6,11 @@
 
 ## Docker Compose (squelette)
 Services : `app` (FastAPI), `jellyfin`, `sonarr`, `radarr`, `lidarr`, `readarr`,
-`ntfy`, `caddy` (reverse proxy). Volumes dédiés pour la bibliothèque (disque USB
-monté sur le host) et pour la config de chaque service.
+`ntfy`, `calibre-web` (pont protocole Kobo Sync/OPDS, cf. ADR 0004), `caddy`
+(reverse proxy). Volumes dédiés pour la bibliothèque (disque USB monté sur le
+host) et pour la config de chaque service. Le volume `books-library` est
+partagé en lecture-écriture par `app` (scan/enrichissement via `calibredb`) et
+en lecture seule par `calibre-web` (indexation).
 
 ## Build multi-architecture
 - `docker buildx` pour produire des images compatibles ARM depuis une machine x86
@@ -20,6 +23,11 @@ monté sur le host) et pour la config de chaque service.
 - Images taguées par version (semver), jamais `latest` en prod
 - Procédure : `docker compose pull && docker compose up -d`, rollback = retag
   vers la version précédente
+
+## Vérification pont Calibre-web
+- Après `docker compose up -d`, vérifier que `/web` répond 404 via Caddy
+  (`curl -I http://<host>:8000/web/` doit renvoyer 404, jamais l'UI Calibre-web)
+- Vérifier `/opds/` répond (catalogue OPDS accessible)
 
 ## Sauvegarde
 - Config des *arr (bases SQLite internes) + config Jellyfin + base de ton appli

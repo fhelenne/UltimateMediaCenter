@@ -2,12 +2,35 @@ services:
   app:
     build: .
     env_file: .env
-    ports:
-      - "8000:8000"
     depends_on:
       - ntfy
     volumes:
       - app-data:/app/data
+      - books-library:/books
+    restart: unless-stopped
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+      - DOCKER_MODS=linuxserver/mods:universal-calibre
+    volumes:
+      - calibre-web-config:/config
+      - books-library:/books:ro
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - app
+      - calibre-web
     restart: unless-stopped
 
   ntfy:
@@ -76,6 +99,7 @@ services:
       - readarr-config:/config
       - readarr-books:/books
       - readarr-downloads:/downloads
+      - books-library:/books-library
     restart: unless-stopped
 
 volumes:
@@ -94,3 +118,6 @@ volumes:
   readarr-config:
   readarr-books:
   readarr-downloads:
+  books-library:
+  calibre-web-config:
+  caddy-data:
