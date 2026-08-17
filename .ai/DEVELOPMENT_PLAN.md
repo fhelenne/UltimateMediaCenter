@@ -32,9 +32,9 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
 
 ## Phase 5 — Intégration lecture
 - [ ] Intégration Jellyfin dans l'UI (lien direct ou embed du player)
-- [ ] Pipeline ebooks : `calibredb add` + `fetch-ebook-metadata` pour scan,
+- [x] Pipeline ebooks : `calibredb add` + `fetch-ebook-metadata` pour scan,
       enrichissement et organisation (indépendant de Calibre-web)
-- [ ] Calibre-web déployé en pont protocole seul — `/kobo/*` + `/opds/*`
+- [x] Calibre-web déployé en pont protocole seul — `/kobo/*` + `/opds/*`
       exposés via reverse proxy, `/web` bloqué (ADR 0004)
 - [ ] Documentation de la configuration liseuse (changement d'URL de sync côté
       appareil — action manuelle, hors script d'installation)
