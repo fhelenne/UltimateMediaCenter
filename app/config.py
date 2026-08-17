@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     jellyfin_url: str
     jellyfin_api_key: str
     jellyfin_public_url: str
+    session_secret: str
     cache_ttl: int = 30
     db_path: str = "data/cache.db"
     calibre_library_path: str = "data/calibre-library"

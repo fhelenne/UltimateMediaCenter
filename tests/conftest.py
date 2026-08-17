@@ -17,6 +17,7 @@ os.environ["READARR_API_KEY"] = "test-api-key"
 os.environ["JELLYFIN_URL"] = "http://jellyfin-test:8096"
 os.environ["JELLYFIN_API_KEY"] = "test-api-key"
 os.environ["JELLYFIN_PUBLIC_URL"] = "http://jellyfin-public-test:8096"
+os.environ["SESSION_SECRET"] = "test-session-secret"
 os.environ["DB_PATH"] = ":memory:"
 os.environ["CALIBRE_LIBRARY_PATH"] = "/test/library"
 
@@ -32,3 +33,18 @@ async def client() -> AsyncClient:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def db_path(tmp_path, monkeypatch):
+    from app.arr import cache
+    from app.auth import auth
+    from app.config import settings
+
+    path = str(tmp_path / "test.db")
+    monkeypatch.setattr(settings, "db_path", path)
+    # httpx's ASGITransport doesn't fire ASGI lifespan events, so the
+    # tables the app's lifespan would normally create are initialized here.
+    auth.init_db(path)
+    cache.init_db(path)
+    return path
