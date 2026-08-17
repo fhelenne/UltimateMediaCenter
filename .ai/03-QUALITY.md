@@ -25,8 +25,7 @@
 
 ## Gestion des erreurs
 - Timeouts explicites sur tous les appels aux API externes (*arr, Jellyfin)
-- Circuit breaker simple : si un *arr ne répond pas, l'UI affiche un statut dégradé
-  plutôt que de planter
+- Circuit breaker simple : *arr injoignable → UI affiche un statut dégradé, ne plante pas
 
 ## Dette technique
 - Fichier `TODO.md` ou labels GitHub `tech-debt` pour tracer les compromis pris

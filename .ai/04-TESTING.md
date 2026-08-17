@@ -21,9 +21,9 @@
 - Re-match manuel → bon *arr appelé selon le type de média
 
 ## Tests de charge (léger, adapté au Pi)
-- Vérifier que l'appli reste réactive avec plusieurs webhooks quasi simultanés
-  (rafale de sortie d'épisodes un même soir)
-- Pas de tests de charge lourds nécessaires vu le contexte mono-foyer
+Vérifier que l'appli reste réactive avec plusieurs webhooks quasi simultanés
+(rafale de sortie d'épisodes un même soir). Pas de tests de charge lourds
+nécessaires vu le contexte mono-foyer.
 
 ## CI
 - Pipeline GitHub Actions : lint → tests unitaires → tests d'intégration → build image

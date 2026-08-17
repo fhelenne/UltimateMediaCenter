@@ -13,21 +13,21 @@ Voir le schéma système : `architecture-media-center.mermaid`
 ## Composants internes
 
 ### 1. Orchestrateur
-- Interroge les API des *arr (statuts, bibliothèques, recherche)
-- Cache les réponses (TTL court) pour ne pas spammer les *arr depuis l'UI
+Interroge les API des *arr (statuts, bibliothèques, recherche), cache les
+réponses (TTL court) pour ne pas spammer les *arr depuis l'UI.
 
 ### 2. Récepteur de webhooks
-- Endpoints `/webhook/{sonarr,radarr,lidarr,readarr}`
-- Valide la source (secret partagé), parse l'event, transmet au module notifications
-- Idempotent : un même event rejoué ne doit pas dupliquer une notif
+Endpoints `/webhook/{sonarr,radarr,lidarr,readarr}` — valide la source
+(secret partagé), parse l'event, transmet au module notifications.
+Idempotent : un même event rejoué ne duplique pas une notif.
 
 ### 3. Module notifications
-- Formatte le message (média, action, lien direct)
-- Envoie vers ntfy/Gotify/Telegram (adaptateur interchangeable)
+Formatte le message (média, action, lien direct), envoie vers
+ntfy/Gotify/Telegram (adaptateur interchangeable).
 
 ### 4. Module re-match
-- Déclenche un Manual Import côté *arr concerné
-- Bascule les paramètres metadata Jellyfin (ignorer fichiers locaux) via son API
+Déclenche un Manual Import côté *arr concerné, bascule les paramètres
+metadata Jellyfin (ignorer fichiers locaux) via son API.
 
 ## Flux de données principaux
 1. Dépôt fichier → *arr scanne → matche → notifie ton appli (webhook) → notif push

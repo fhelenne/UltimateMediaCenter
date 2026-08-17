@@ -2,7 +2,9 @@
 
 Instructions pour Claude Code sur ce dépôt. Toute la documentation projet vit
 dans `.ai/`. Ne charge que les fichiers pertinents pour la tâche en cours —
-ne pas tout lire par défaut.
+ne pas tout lire par défaut. Ne pas précharger tout `.ai/` en début de
+session « au cas où » : utiliser le tableau de routage ci-dessous à la
+demande, tâche par tâche.
 
 ## Toujours lire en premier
 - `.ai/01-CONTEXT.md` — vision, contraintes, périmètre. Base minimale avant

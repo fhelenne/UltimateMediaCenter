@@ -30,10 +30,10 @@ en lecture seule par `calibre-web` (indexation).
 - Vérifier `/opds/` répond (catalogue OPDS accessible)
 
 ## Sauvegarde
-- Config des *arr (bases SQLite internes) + config Jellyfin + base de ton appli
-  → sauvegarde régulière hors du Pi (autre disque ou cloud perso)
-- La bibliothèque média elle-même n'a pas besoin d'être sauvegardée si elle est
-  re-téléchargeable via les *arr
+Config des *arr (bases SQLite internes) + config Jellyfin + base de l'appli →
+sauvegarde régulière hors du Pi (autre disque ou cloud perso). La bibliothèque
+média elle-même n'a pas besoin d'être sauvegardée si re-téléchargeable via
+les *arr.
 
 ## Installation en une commande
 
