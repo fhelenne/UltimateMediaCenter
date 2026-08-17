@@ -36,7 +36,7 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
       enrichissement et organisation (indépendant de Calibre-web)
 - [x] Calibre-web déployé en pont protocole seul — `/kobo/*` + `/opds/*`
       exposés via reverse proxy, `/web` bloqué (ADR 0004)
-- [ ] Documentation de la configuration liseuse (changement d'URL de sync côté
+- [x] Documentation de la configuration liseuse (changement d'URL de sync côté
       appareil — action manuelle, hors script d'installation)
 
 ## Phase 6 — Durcissement
