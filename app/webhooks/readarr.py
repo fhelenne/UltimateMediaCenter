@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header
 from pydantic import BaseModel
 
 from app.config import settings
+from app.ebooks import ebooks
 from app.webhooks.base import ArrEvent, handle_webhook
 
 router = APIRouter()
@@ -17,6 +18,7 @@ class ReadarrBook(BaseModel):
 
 class ReadarrBookFile(BaseModel):
     quality: str
+    path: str
 
 
 class ReadarrEvent(ArrEvent):
@@ -32,9 +34,16 @@ def _format(event: ReadarrEvent) -> tuple[str, str]:
     return f"{book} — {author}", quality
 
 
+async def _scan(event: ReadarrEvent) -> None:
+    if event.bookFiles:
+        await ebooks.scan_and_enrich(event.bookFiles[0].path)
+
+
 @router.post("/webhook/readarr")
 async def readarr_webhook(
     event: ReadarrEvent,
     x_readarr_secret: str | None = Header(default=None),
 ) -> dict[str, str]:
-    return await handle_webhook(event, x_readarr_secret, settings.readarr_secret, _format)
+    return await handle_webhook(
+        event, x_readarr_secret, settings.readarr_secret, _format, on_download_extra=_scan
+    )
