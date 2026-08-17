@@ -2,11 +2,12 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.arr import lidarr, radarr, readarr, sonarr
+from app.auth.router import require_login
 from app.config import settings
 from app.jellyfin import client as jellyfin
 from app.rematch import rematch
@@ -32,14 +33,16 @@ PAGE_SIZE = 25
 
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
+async def index(request: Request, user: dict = Depends(require_login)) -> HTMLResponse:
     return templates.TemplateResponse(
         request, "index.html", {"tabs": TABS}
     )
 
 
 @router.get("/tab/{arr}", response_class=HTMLResponse)
-async def tab(request: Request, arr: str, page: int = 1) -> HTMLResponse:
+async def tab(
+    request: Request, arr: str, page: int = 1, user: dict = Depends(require_login)
+) -> HTMLResponse:
     if arr not in _CLIENTS:
         return HTMLResponse("Not found", status_code=404)
     client = _CLIENTS[arr]
@@ -88,7 +91,12 @@ async def _none() -> None:
 
 @router.get("/rematch/{arr}/{item_id}", response_class=HTMLResponse)
 async def rematch_candidates(
-    request: Request, arr: str, item_id: int, path: str, title: str
+    request: Request,
+    arr: str,
+    item_id: int,
+    path: str,
+    title: str,
+    user: dict = Depends(require_login),
 ) -> HTMLResponse:
     if arr not in _CLIENTS:
         return HTMLResponse("Not found", status_code=404)
@@ -115,6 +123,7 @@ async def rematch_apply(
     path: str = Form(...),
     title: str = Form(...),
     candidate_index: int = Form(...),
+    user: dict = Depends(require_login),
 ) -> HTMLResponse:
     if arr not in _CLIENTS:
         return HTMLResponse("Not found", status_code=404)

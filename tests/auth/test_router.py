@@ -60,3 +60,9 @@ async def test_logout_clears_session(client: AsyncClient, db_path):
     response = await client.get("/auth/change-password")
     assert response.status_code == 303
     assert response.headers["location"] == "/auth/login"
+
+
+async def test_index_without_session_redirects_to_login(client: AsyncClient, db_path):
+    response = await client.get("/")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/auth/login"
