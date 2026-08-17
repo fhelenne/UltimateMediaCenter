@@ -8,6 +8,9 @@
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
 </head>
 <body>
+    <form method="post" action="/auth/logout" style="text-align: right; margin: 0.5rem 0;">
+        <button type="submit">Déconnexion</button>
+    </form>
     <main class="container">
         {% block content %}{% endblock %}
     </main>
