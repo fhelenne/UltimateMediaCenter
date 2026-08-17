@@ -16,6 +16,7 @@ os.environ["READARR_URL"] = "http://readarr-test:8787"
 os.environ["READARR_API_KEY"] = "test-api-key"
 os.environ["JELLYFIN_URL"] = "http://jellyfin-test:8096"
 os.environ["JELLYFIN_API_KEY"] = "test-api-key"
+os.environ["JELLYFIN_PUBLIC_URL"] = "http://jellyfin-public-test:8096"
 os.environ["DB_PATH"] = ":memory:"
 os.environ["CALIBRE_LIBRARY_PATH"] = "/test/library"
 

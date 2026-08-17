@@ -41,6 +41,11 @@
                         hx-target="#rematch-modal">
                         Re-match
                     </button>
+                    {% if item.get('id') in jellyfin_links %}
+                    <a href="{{ jellyfin_links[item.get('id')] }}" target="_blank" rel="noopener">
+                        Voir dans Jellyfin
+                    </a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

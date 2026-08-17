@@ -69,6 +69,42 @@ async def test_tab_shows_rematch_button(client: AsyncClient, monkeypatch):
     assert "/rematch/sonarr/42" in response.text
 
 
+async def test_tab_shows_jellyfin_link_on_match(client: AsyncClient, monkeypatch):
+    async def _queue():
+        return []
+
+    async def _library():
+        return [{"id": 42, "title": "Inception", "path": "/data/movies/Inception", "monitored": True}]
+
+    async def _search(query):
+        return [{"Id": "abc123", "Name": "Inception"}]
+
+    monkeypatch.setattr("app.arr.sonarr.queue", _queue)
+    monkeypatch.setattr("app.arr.sonarr.library", _library)
+    monkeypatch.setattr("app.jellyfin.client.search_items", _search)
+    response = await client.get("/tab/sonarr")
+    assert response.status_code == 200
+    assert "http://jellyfin-public-test:8096/web/index.html#!/details?id=abc123" in response.text
+
+
+async def test_tab_hides_jellyfin_link_when_no_match(client: AsyncClient, monkeypatch):
+    async def _queue():
+        return []
+
+    async def _library():
+        return [{"id": 42, "title": "Inception", "path": "/data/movies/Inception", "monitored": True}]
+
+    async def _search(query):
+        return None
+
+    monkeypatch.setattr("app.arr.sonarr.queue", _queue)
+    monkeypatch.setattr("app.arr.sonarr.library", _library)
+    monkeypatch.setattr("app.jellyfin.client.search_items", _search)
+    response = await client.get("/tab/sonarr")
+    assert response.status_code == 200
+    assert "web/index.html#!/details" not in response.text
+
+
 async def test_rematch_get_returns_candidates(client: AsyncClient, monkeypatch):
     async def _candidates(arr, item):
         return [{"path": "/data/movies/Inception.mkv"}]

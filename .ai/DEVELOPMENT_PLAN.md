@@ -31,7 +31,7 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
 - [x] Tests couvrant les cas d'erreur (mauvais type de média, *arr injoignable)
 
 ## Phase 5 — Intégration lecture
-- [ ] Intégration Jellyfin dans l'UI (lien direct ou embed du player)
+- [x] Intégration Jellyfin dans l'UI (lien direct ou embed du player)
 - [x] Pipeline ebooks : `calibredb add` + `fetch-ebook-metadata` pour scan,
       enrichissement et organisation (indépendant de Calibre-web)
 - [x] Calibre-web déployé en pont protocole seul — `/kobo/*` + `/opds/*`

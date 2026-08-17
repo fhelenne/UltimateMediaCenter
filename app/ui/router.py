@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -6,6 +7,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.arr import lidarr, radarr, readarr, sonarr
+from app.config import settings
+from app.jellyfin import client as jellyfin
 from app.rematch import rematch
 
 router = APIRouter()
@@ -47,6 +50,7 @@ async def tab(request: Request, arr: str, page: int = 1) -> HTMLResponse:
     library_items = all_library or []
     library_page = library_items[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
     has_next = len(library_items) > page * PAGE_SIZE
+    jellyfin_links = await _jellyfin_links(library_page)
     return templates.TemplateResponse(
         request,
         "_tab.html",
@@ -54,11 +58,32 @@ async def tab(request: Request, arr: str, page: int = 1) -> HTMLResponse:
             "arr": arr,
             "queue": queue_items,
             "library": library_page,
+            "jellyfin_links": jellyfin_links,
             "page": page,
             "has_next": has_next,
             "error": error,
         },
     )
+
+
+async def _jellyfin_links(library_page: list[dict]) -> dict[int, str]:
+    titles = [item.get("title") or item.get("artistName") for item in library_page]
+    results = await asyncio.gather(
+        *(jellyfin.search_items(title) if title else _none() for title in titles)
+    )
+    links: dict[int, str] = {}
+    for item, result in zip(library_page, results):
+        if result:
+            jf_id = result[0].get("Id")
+            if jf_id:
+                links[item.get("id")] = (
+                    f"{settings.jellyfin_public_url}/web/index.html#!/details?id={jf_id}"
+                )
+    return links
+
+
+async def _none() -> None:
+    return None
 
 
 @router.get("/rematch/{arr}/{item_id}", response_class=HTMLResponse)
