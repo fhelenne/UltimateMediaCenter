@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -28,6 +28,14 @@ async def lifespan(app: FastAPI):
     yield
 
 
+if settings.session_secret in ("", "changeme"):
+    raise RuntimeError(
+        "SESSION_SECRET n'est pas défini avec une valeur sûre. Refus de démarrer.\n"
+        "Générer une valeur avec : "
+        'python -c "import secrets; print(secrets.token_urlsafe(32))"\n'
+        "puis la renseigner dans SESSION_SECRET dans le fichier .env."
+    )
+
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
 
@@ -42,12 +50,18 @@ app.include_router(ui_router.router)
 @app.exception_handler(RedirectToLogin)
 async def _handle_redirect_to_login(
     request: Request, exc: RedirectToLogin
-) -> RedirectResponse:
+) -> Response:
+    if request.headers.get("HX-Request"):
+        return Response(status_code=204, headers={"HX-Redirect": "/auth/login"})
     return RedirectResponse("/auth/login", status_code=303)
 
 
 @app.exception_handler(RedirectToChangePassword)
 async def _handle_redirect_to_change_password(
     request: Request, exc: RedirectToChangePassword
-) -> RedirectResponse:
+) -> Response:
+    if request.headers.get("HX-Request"):
+        return Response(
+            status_code=204, headers={"HX-Redirect": "/auth/change-password"}
+        )
     return RedirectResponse("/auth/change-password", status_code=303)

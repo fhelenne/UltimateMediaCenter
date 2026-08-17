@@ -84,6 +84,15 @@ def verify_password(password: str, user: dict) -> bool:
     return hmac.compare_digest(candidate, user["password_hash"])
 
 
+def dummy_hash(password: str) -> None:
+    """Pay the same scrypt cost as a real verify_password call.
+
+    Used when the username doesn't exist, so login response time doesn't
+    leak whether a username is registered (timing side-channel).
+    """
+    _hash_password(password, secrets.token_bytes(16))
+
+
 def set_password(db_path: str, username: str, new_password: str) -> None:
     salt = secrets.token_bytes(16)
     password_hash = _hash_password(new_password, salt)
