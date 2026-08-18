@@ -240,8 +240,16 @@ main() {
   check_prereqs
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
 ```
+
+This guard matters beyond style: later tasks' verification steps
+`source install.sh` to get the function definitions in isolation without
+running the real `main` (which would otherwise attempt a live `git clone`
+against `$REPO_URL` and block/fail). Without the guard, sourcing the
+script always runs `main "$@"` for real.
 
 - [ ] **Step 2: Make it executable**
 
@@ -458,7 +466,7 @@ mkdir -p /tmp/umc-install-test
 cp .env.example /tmp/umc-install-test/.env.example
 mkdir -p /tmp/umc-usb-fake
 TARGET_DIR=/tmp/umc-install-test bash -c '
-  source install.sh 2>/dev/null || true
+  source install.sh
   TARGET_DIR=/tmp/umc-install-test
   detect_usb_mount() { echo /tmp/umc-usb-fake; }
   generate_env
@@ -470,12 +478,6 @@ test -d /tmp/umc-usb-fake/tv
 echo "generate_env ok"
 rm -rf /tmp/umc-install-test /tmp/umc-usb-fake
 ```
-
-Note: sourcing `install.sh` directly runs `main "$@"` at the bottom of the
-file too (since the script calls `main "$@"` unconditionally) — the `2>/dev/null
-|| true` above absorbs that side effect for this isolated function test;
-what matters is that `generate_env` itself, called explicitly afterward,
-produces a `.env` with no `changeme` left and the right `USB_MOUNT` value.
 
 Expected: no `changeme` string anywhere in the generated `.env`,
 `USB_MOUNT` set to the fake path, and `/tmp/umc-usb-fake/tv` created.
@@ -568,7 +570,7 @@ rm -rf /tmp/umc-install-test
 mkdir -p /tmp/umc-install-test
 printf 'SONARR_API_KEY=testkey123\nRADARR_API_KEY=testkey456\nLIDARR_API_KEY=testkey789\nREADARR_API_KEY=testkeyabc\n' > /tmp/umc-install-test/.env
 TARGET_DIR=/tmp/umc-install-test bash -c '
-  source install.sh 2>/dev/null || true
+  source install.sh
   TARGET_DIR=/tmp/umc-install-test
   seed_arr_configs
 '
@@ -580,7 +582,7 @@ echo "readarr port ok"
 # idempotency: re-run must not clobber an existing config.xml
 docker run --rm -v ultimatemediacenter_sonarr-config:/config alpine sh -c 'echo CUSTOM > /config/config.xml'
 TARGET_DIR=/tmp/umc-install-test bash -c '
-  source install.sh 2>/dev/null || true
+  source install.sh
   TARGET_DIR=/tmp/umc-install-test
   seed_arr_configs
 '
