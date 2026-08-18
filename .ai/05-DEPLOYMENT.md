@@ -2,7 +2,8 @@
 
 ## Environnements
 - **Dev** : machine de développement (x86), docker-compose avec *arr de test
-- **Prod** : Raspberry Pi 3 B+ (ARM), images buildées pour `arm/v7` ou `arm64`
+- **Prod** : Raspberry Pi 3 B+ (ARM), OS 64 bits requis — image de l'appli
+  buildée pour `arm64` uniquement, pas `armv7` (ADR 0003)
 
 ## Docker Compose (squelette)
 Services : `app` (FastAPI), `jellyfin`, `sonarr`, `radarr`, `lidarr`, `readarr`,
@@ -13,10 +14,11 @@ partagé en lecture-écriture par `app` (scan/enrichissement via `calibredb`) et
 en lecture seule par `calibre-web` (indexation).
 
 ## Build multi-architecture
-- `docker buildx` pour produire des images compatibles ARM depuis une machine x86
-  (évite de builder directement sur le Pi, lent)
-- Image de l'appli maison en Alpine, multi-stage, nettoyée (cf. ADR 0003) —
-  vise < 150 Mo pour accélérer le pull sur Pi
+- `docker buildx build --platform linux/arm64` pour produire l'image depuis
+  une machine x86 (évite de builder directement sur le Pi, lent)
+- Image de l'appli maison en Alpine, multi-stage, nettoyée, utilisateur
+  non-root, `HEALTHCHECK` sur `/health` (cf. ADR 0003) — vise < 150 Mo,
+  mesurée à 99 Mo
 - Images officielles conservées pour Jellyfin/*arr (pas de ré-empaquetage)
 
 ## Mise à jour
@@ -48,7 +50,7 @@ Le script `install.sh` doit :
    `SESSION_SECRET`) — une valeur réelle générée à l'install, jamais laissée à
    `changeme` : l'appli refuse de démarrer si `SESSION_SECRET` vaut `changeme`
    ou est vide
-4. Créer le compte `admin` OAuth avec mot de passe aléatoire, affiché une
+4. Créer le compte `admin` (session cookie) avec mot de passe aléatoire, affiché une
    seule fois en fin d'install (cf. ADR 0002) — changement obligatoire à la
    première connexion
 5. Détecter ou demander le point de montage du disque USB (seule interaction

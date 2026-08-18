@@ -45,7 +45,24 @@ composants qu'on ne maintient pas.
   de build
 
 ## Conséquences
-- Image finale de l'appli visée < 150 Mo
+- Image finale de l'appli visée < 150 Mo — mesurée à 99 Mo (build natif,
+  vérification arm64 réelle non faite faute de `buildx` disponible en local,
+  mais aucune dépendance Python de ce projet ne nécessite de compilation :
+  toutes ont des wheels précompilées `musllinux` pour `aarch64`)
 - Pipeline CI de build multi-arch (cf. `05-DEPLOYMENT.md`) doit valider la
   compatibilité Alpine/musl des dépendances Python utilisées avant chaque
   release, pas seulement au moment du choix initial
+
+## Correctif (2026-08-18) — arm64 uniquement, pas armv7
+`pydantic-settings` dépend de `pydantic-core` (extension Rust). PyPI ne
+publie des wheels `musllinux` précompilées que pour `x86_64`/`aarch64`, pas
+pour `armv7` — un Pi 3B+ en OS 32 bits forcerait donc une compilation Rust
+dans le stage de build (toolchain Rust à installer, temps de build bien plus
+long, va à l'encontre de "pas d'étape de build manuelle").
+
+Décision : cibler **arm64 uniquement**. Le Cortex-A53 du Pi 3B+ est 64 bits
+capable — impose Raspberry Pi OS 64 bits comme pré-requis (cf.
+`01-CONTEXT.md`), en échange de zéro compilation native dans l'image finale.
+Le support armv7 n'est pas exclu définitivement, mais nécessiterait de
+rouvrir cette décision (toolchain Rust cross-compilée dans le stage builder)
+si un besoin concret apparaît.

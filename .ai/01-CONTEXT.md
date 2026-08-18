@@ -12,6 +12,8 @@ ebooks dans une interface unique, avec automatisation déléguée aux outils *ar
 
 ## Contraintes techniques
 - **Matériel** : Pi 3 B+ — 1 Go RAM, quad-core ARM Cortex-A53, pas de transcodage lourd
+- **OS** : Raspberry Pi OS 64-bit (arm64) requis — l'image de l'appli cible
+  arm64 uniquement, pas armv7 (ADR 0003)
 - **Stockage** : disque externe USB obligatoire (pas la carte SD pour la bibliothèque)
 - **Réseau** : usage domestique, pas d'exposition publique par défaut
 - **Charge** : les *arr peuvent être déportés sur une autre machine si le Pi sature
