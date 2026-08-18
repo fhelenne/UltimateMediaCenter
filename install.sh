@@ -4,8 +4,13 @@ set -euo pipefail
 # Tag/branch to fetch. No tagged release exists yet — update this at the
 # first tagged release (see
 # docs/superpowers/specs/2026-08-18-install-sh-design.md).
+# NOTE: once REF is ever set to a real tag, `git fetch --depth 1 origin
+# <tag>` does not produce a ref that `git checkout <tag>` can resolve
+# directly — DWIM checkout-by-name only works for branches, not tags.
+# This is a known gap for whenever REF is first set to a real release tag;
+# not fixed now since no tags exist yet.
 REF="${REF:-main}"
-REPO_URL="${REPO_URL:-git@github.com:fhelenne/UltimateMediaCenter.git}"
+REPO_URL="${REPO_URL:-https://github.com/fhelenne/UltimateMediaCenter.git}"
 TARGET_DIR="${TARGET_DIR:-$HOME/ultimatemediacenter}"
 DRY_RUN=0
 
@@ -35,6 +40,14 @@ run() {
 }
 
 check_prereqs() {
+  local missing=""
+  command -v git >/dev/null 2>&1 || missing="${missing}git "
+  command -v curl >/dev/null 2>&1 || missing="${missing}curl "
+  if [ -n "$missing" ]; then
+    log "ERREUR : outil(s) manquant(s) requis pour l'installation : ${missing}"
+    exit 1
+  fi
+
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     log "Docker + plugin Compose déjà présents."
     return
@@ -44,6 +57,10 @@ check_prereqs() {
     log "[dry-run] curl -fsSL https://get.docker.com | sh"
   else
     curl -fsSL https://get.docker.com | sh
+    if ! docker info >/dev/null 2>&1; then
+      log "Docker vient d'être installé mais nécessite une reconnexion pour que les permissions prennent effet. Déconnectez-vous et reconnectez-vous (ou exécutez 'newgrp docker'), puis relancez ce script."
+      exit 1
+    fi
   fi
 }
 
@@ -78,7 +95,7 @@ random_secret() {
 detect_usb_mount() {
   local candidate
   for candidate in /media/*/* /mnt/*; do
-    if [ -d "$candidate" ] && [ -w "$candidate" ]; then
+    if [ -d "$candidate" ] && [ -w "$candidate" ] && mountpoint -q "$candidate"; then
       echo "$candidate"
       return 0
     fi
@@ -87,14 +104,21 @@ detect_usb_mount() {
 }
 
 generate_env() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] generate_env: aurait généré .env et pré-semé les répertoires USB"
+    return
+  fi
+
   local usb_mount
   if usb_mount=$(detect_usb_mount); then
     log "Disque USB détecté automatiquement : $usb_mount"
-  elif [ "$DRY_RUN" -eq 1 ]; then
-    usb_mount=/tmp/dry-run-usb
-    log "[dry-run] pas de point de montage détecté, valeur fictive utilisée : $usb_mount"
+    local confirm
+    read -r -p "Utiliser ce point de montage ? [O/n] " confirm < /dev/tty
+    if [ "$confirm" = "n" ] || [ "$confirm" = "N" ]; then
+      read -r -p "Point de montage du disque USB pour la bibliothèque média : " usb_mount < /dev/tty
+    fi
   else
-    read -r -p "Point de montage du disque USB pour la bibliothèque média : " usb_mount
+    read -r -p "Point de montage du disque USB pour la bibliothèque média : " usb_mount < /dev/tty
   fi
 
   local sonarr_api_key radarr_api_key lidarr_api_key readarr_api_key
@@ -114,7 +138,8 @@ generate_env() {
     -e "s#^LIDARR_API_KEY=.*#LIDARR_API_KEY=${lidarr_api_key}#" \
     -e "s#^READARR_API_KEY=.*#READARR_API_KEY=${readarr_api_key}#" \
     -e "s#^SESSION_SECRET=.*#SESSION_SECRET=$(random_secret)#" \
-    "${TARGET_DIR}/.env.example" > "${TARGET_DIR}/.env"
+    "${TARGET_DIR}/.env.example" > "${TARGET_DIR}/.env.tmp"
+  mv "${TARGET_DIR}/.env.tmp" "${TARGET_DIR}/.env"
 
   mkdir -p "${usb_mount}/tv" "${usb_mount}/movies" "${usb_mount}/music" "${usb_mount}/books-library"
 
@@ -122,6 +147,11 @@ generate_env() {
 }
 
 seed_arr_configs() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] seed_arr_configs: aurait pré-semé les config.xml *arr"
+    return
+  fi
+
   local service port api_key volume
   for service in sonarr radarr lidarr readarr; do
     case "$service" in
@@ -133,24 +163,44 @@ seed_arr_configs() {
     api_key=$(grep "^${service^^}_API_KEY=" "${TARGET_DIR}/.env" | cut -d= -f2)
     volume="ultimatemediacenter_${service}-config"
     run docker volume create "$volume" >/dev/null
-    run docker run --rm -v "${volume}:/config" alpine sh -c "
+    run docker run --rm -e API_KEY="${api_key}" -e PORT="${port}" -v "${volume}:/config" alpine sh -c '
       if [ ! -f /config/config.xml ]; then
         cat > /config/config.xml <<EOF
 <Config>
   <LogLevel>info</LogLevel>
-  <Port>${port}</Port>
-  <ApiKey>${api_key}</ApiKey>
+  <Port>$PORT</Port>
+  <ApiKey>$API_KEY</ApiKey>
 </Config>
 EOF
       fi
-    "
+    '
   done
   log "Clés API pré-semées dans les config.xml de sonarr/radarr/lidarr/readarr."
 }
 
+check_usb_binding() {
+  local vol
+  for vol in sonarr-tv radarr-movies lidarr-music books-library; do
+    local full_vol="ultimatemediacenter_${vol}"
+    if docker volume inspect "$full_vol" >/dev/null 2>&1; then
+      local device
+      device=$(docker volume inspect "$full_vol" --format '{{if .Options}}{{.Options.device}}{{end}}' 2>/dev/null || echo "")
+      if [ -z "$device" ]; then
+        log "ERREUR : le volume Docker '${full_vol}' existe déjà sans être lié au disque USB."
+        log "Ce volume contient probablement des données sur la carte SD, pas sur le disque USB."
+        log "Pour corriger : sauvegardez son contenu si besoin, puis 'docker volume rm ${full_vol}' avant de relancer ce script."
+        exit 1
+      fi
+    fi
+  done
+}
+
 up() {
+  if [ "$DRY_RUN" -eq 0 ]; then
+    check_usb_binding
+  fi
   run docker compose --project-directory "$TARGET_DIR" pull
-  run docker compose --project-directory "$TARGET_DIR" up -d
+  run docker compose --project-directory "$TARGET_DIR" up -d --build
 }
 
 summary() {
@@ -160,11 +210,20 @@ summary() {
   log "Installation terminée."
   log "URL locale : ${url}"
   if [ "$DRY_RUN" -eq 0 ]; then
-    admin_password=$(docker compose --project-directory "$TARGET_DIR" logs app 2>/dev/null \
-      | grep -o "mot de passe initial: [^ ]*" | tail -n1 | cut -d' ' -f5 || true)
+    local _attempt
+    for _attempt in $(seq 1 15); do
+      admin_password=$(docker compose --project-directory "$TARGET_DIR" logs app 2>/dev/null \
+        | grep -o "mot de passe initial: [^ ]*" | tail -n1 | cut -d' ' -f5 || true)
+      if [ -n "$admin_password" ]; then
+        break
+      fi
+      sleep 2
+    done
     if [ -n "$admin_password" ]; then
       log "Mot de passe admin initial : ${admin_password}"
       log "(changement obligatoire à la première connexion)"
+    else
+      log "Mot de passe admin non trouvé automatiquement — récupérez-le avec : docker compose logs app | grep 'mot de passe initial'"
     fi
   fi
   log "Configuration liseuse Kobo : voir docs/user/liseuse-kobo.md"
@@ -173,6 +232,7 @@ summary() {
 
 main() {
   mkdir -p "$TARGET_DIR"
+  umask 077
   exec > >(tee -a "$LOG_FILE") 2>&1
   if [ "$REF" = "main" ]; then
     log "ATTENTION : aucune release taguée disponible, utilisation de la branche main."
