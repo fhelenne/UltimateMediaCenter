@@ -1,5 +1,13 @@
 import importlib
 
+from httpx import AsyncClient
+
+
+async def test_health_returns_200(client: AsyncClient) -> None:
+    response = await client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
 
 def test_session_secret_changeme_refuses_to_start(monkeypatch):
     # `settings` is a module-level singleton shared by reference across every

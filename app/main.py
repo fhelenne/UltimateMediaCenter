@@ -39,6 +39,11 @@ if settings.session_secret in ("", "changeme"):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 app.include_router(sonarr.router)
 app.include_router(radarr.router)
 app.include_router(lidarr.router)
