@@ -28,6 +28,13 @@ fois par l'utilisateur, référencé via la variable d'environnement
 `RCLONE_REMOTE` (ex. `b2:umc-backups`). Étape manuelle documentée, même
 nature que la clé API Jellyfin (Phase 6a).
 
+`rclone` lui-même tourne en conteneur Docker jetable (`rclone/rclone`), pas
+en binaire installé sur l'hôte — cohérent avec le reste du script (mêmes
+conteneurs `alpine` jetables que pour l'archivage) et évite d'ajouter une
+étape d'installation hôte non couverte par `install.sh`. Le répertoire de
+config `rclone` (`~/.config/rclone` par défaut) est monté dans le
+conteneur pour persister entre les exécutions.
+
 ### Déclenchement : cron hôte, pas de conteneur dédié
 
 `backup.sh` est un script autonome, ajouté au crontab de l'hôte par
