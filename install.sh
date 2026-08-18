@@ -161,7 +161,7 @@ summary() {
   log "URL locale : ${url}"
   if [ "$DRY_RUN" -eq 0 ]; then
     admin_password=$(docker compose --project-directory "$TARGET_DIR" logs app 2>/dev/null \
-      | grep -o "mot de passe initial: [^ ]*" | tail -n1 | cut -d' ' -f4 || true)
+      | grep -o "mot de passe initial: [^ ]*" | tail -n1 | cut -d' ' -f5 || true)
     if [ -n "$admin_password" ]; then
       log "Mot de passe admin initial : ${admin_password}"
       log "(changement obligatoire à la première connexion)"
