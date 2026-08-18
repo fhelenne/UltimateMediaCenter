@@ -43,7 +43,7 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
 - [x] Authentification par session cookie + compte admin par défaut, changement
       de mot de passe forcé à la première connexion (ADR 0002)
 - [x] Image Docker de l'appli en Alpine multi-stage, nettoyée, < 150 Mo (ADR 0003)
-- [ ] Sauvegardes automatisées (config *arr, DB app)
+- [x] Sauvegardes automatisées (config *arr, DB app)
 - [x] Script d'installation one-liner (`install.sh`), idempotent, testé sur
       Raspberry Pi OS vierge — cf. `05-DEPLOYMENT.md`
 - [ ] Documentation utilisateur finale + procédure de mise à jour

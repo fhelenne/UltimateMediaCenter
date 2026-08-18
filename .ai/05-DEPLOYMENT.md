@@ -32,10 +32,52 @@ en lecture seule par `calibre-web` (indexation).
 - Vérifier `/opds/` répond (catalogue OPDS accessible)
 
 ## Sauvegarde
-Config des *arr (bases SQLite internes) + config Jellyfin + base de l'appli →
-sauvegarde régulière hors du Pi (autre disque ou cloud perso). La bibliothèque
-média elle-même n'a pas besoin d'être sauvegardée si re-téléchargeable via
-les *arr.
+
+`backup.sh` archive `sonarr-config`, `radarr-config`, `lidarr-config`,
+`readarr-config`, `jellyfin-config`, `calibre-web-config`, et `app-data`
+(contient `cache.db` + les comptes utilisateurs) puis les envoie via
+`rclone` (exécuté en conteneur Docker jetable — aucune installation de
+`rclone` sur l'hôte requise) vers un remote configuré par l'utilisateur —
+disque externe (chemin local ou monté), NAS en SSH, ou cloud (S3/B2/Drive/
+etc., au choix de `rclone`). La bibliothèque média elle-même n'a pas besoin
+d'être sauvegardée si re-téléchargeable via les *arr.
+
+### Configuration initiale (une fois)
+
+1. Configuration interactive du remote de destination (identifiants cloud
+   ou chemin disque/SSH selon le choix) :
+   ```
+   mkdir -p ~/.config/rclone
+   docker run --rm -it -v ~/.config/rclone:/config/rclone rclone/rclone config
+   ```
+2. Ajouter au crontab (`crontab -e`) :
+   ```
+   0 3 * * * RCLONE_REMOTE=nom:chemin /chemin/vers/backup.sh
+   ```
+   (adapter `nom:chemin` au remote configuré à l'étape 1, et le chemin vers
+   le script à son emplacement réel)
+
+### Rétention
+
+Les sauvegardes de plus de 14 jours sont supprimées automatiquement du
+remote après chaque envoi réussi (variable `RETENTION_DAYS`, ajustable).
+
+### Restauration (procédure manuelle)
+
+Pas de script de restauration — enjeu trop élevé pour un script qui devine
+en pleine panne. Pour restaurer un service (exemple avec `sonarr`) :
+
+1. Télécharger l'archive datée souhaitée depuis le remote :
+   `docker run --rm -v ~/.config/rclone:/config/rclone -v "$(pwd):/data" rclone/rclone copy nom:chemin/AAAA-MM-JJ/sonarr-config.tar.gz /data`
+2. Arrêter le service : `docker compose stop sonarr`
+3. Vider le volume existant :
+   `docker run --rm -v ultimatemediacenter_sonarr-config:/data alpine sh -c "rm -rf /data/*"`
+4. Extraire l'archive dans le volume :
+   `docker run --rm -v ultimatemediacenter_sonarr-config:/data -v "$(pwd):/backup" alpine tar xzf /backup/sonarr-config.tar.gz -C /data`
+5. Redémarrer : `docker compose up -d sonarr`
+
+Adapter le nom de volume/service pour les autres composants
+(`radarr`, `lidarr`, `readarr`, `jellyfin`, `calibre-web`, `app`).
 
 ## Installation en une commande
 
