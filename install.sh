@@ -90,6 +90,9 @@ generate_env() {
   local usb_mount
   if usb_mount=$(detect_usb_mount); then
     log "Disque USB détecté automatiquement : $usb_mount"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    usb_mount=/tmp/dry-run-usb
+    log "[dry-run] pas de point de montage détecté, valeur fictive utilisée : $usb_mount"
   else
     read -r -p "Point de montage du disque USB pour la bibliothèque média : " usb_mount
   fi
@@ -145,6 +148,29 @@ EOF
   log "Clés API pré-semées dans les config.xml de sonarr/radarr/lidarr/readarr."
 }
 
+up() {
+  run docker compose --project-directory "$TARGET_DIR" pull
+  run docker compose --project-directory "$TARGET_DIR" up -d
+}
+
+summary() {
+  local admin_password url
+  url="http://$(hostname -I 2>/dev/null | awk '{print $1}'):8000"
+  log ""
+  log "Installation terminée."
+  log "URL locale : ${url}"
+  if [ "$DRY_RUN" -eq 0 ]; then
+    admin_password=$(docker compose --project-directory "$TARGET_DIR" logs app 2>/dev/null \
+      | grep -o "mot de passe initial: [^ ]*" | tail -n1 | cut -d' ' -f4 || true)
+    if [ -n "$admin_password" ]; then
+      log "Mot de passe admin initial : ${admin_password}"
+      log "(changement obligatoire à la première connexion)"
+    fi
+  fi
+  log "Configuration liseuse Kobo : voir docs/user/liseuse-kobo.md"
+  log "Jellyfin nécessite une configuration manuelle initiale (assistant web) : voir le commentaire JELLYFIN_API_KEY dans .env.example"
+}
+
 main() {
   mkdir -p "$TARGET_DIR"
   exec > >(tee -a "$LOG_FILE") 2>&1
@@ -164,6 +190,8 @@ main() {
     generate_env
     seed_arr_configs
   fi
+  up
+  summary
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
