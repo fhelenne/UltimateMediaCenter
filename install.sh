@@ -47,6 +47,26 @@ check_prereqs() {
   fi
 }
 
+is_existing_install() {
+  [ -f "${TARGET_DIR}/.env" ]
+}
+
+fetch_release() {
+  if [ -d "${TARGET_DIR}/.git" ]; then
+    run git -C "$TARGET_DIR" fetch --depth 1 origin "$REF"
+    run git -C "$TARGET_DIR" checkout "$REF"
+    run git -C "$TARGET_DIR" reset --hard "origin/${REF}"
+  else
+    # TARGET_DIR already exists at this point (main() ran mkdir -p and
+    # started logging into it), so it is never empty and `git clone`
+    # would refuse it. Init + fetch + checkout in place instead.
+    run git -C "$TARGET_DIR" init
+    run git -C "$TARGET_DIR" remote add origin "$REPO_URL"
+    run git -C "$TARGET_DIR" fetch --depth 1 origin "$REF"
+    run git -C "$TARGET_DIR" checkout "$REF"
+  fi
+}
+
 main() {
   mkdir -p "$TARGET_DIR"
   exec > >(tee -a "$LOG_FILE") 2>&1
@@ -54,6 +74,14 @@ main() {
     log "ATTENTION : aucune release taguée disponible, utilisation de la branche main."
   fi
   check_prereqs
+  if is_existing_install; then
+    log "Installation existante détectée (.env présent) — mode mise à jour."
+    FRESH_INSTALL=0
+  else
+    log "Aucune installation existante détectée — installation fraîche."
+    FRESH_INSTALL=1
+  fi
+  fetch_release
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
