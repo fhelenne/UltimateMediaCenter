@@ -59,6 +59,16 @@ Le script `install.sh` doit :
    (le pull des ~6 images peut prendre 10-15 min sur Pi 3B+)
 7. Afficher l'URL locale finale + rappel des identifiants générés
 
+Détails d'implémentation :
+- Les clés API *arr sont pré-semées dans le `config.xml` de chaque service
+  (dans son volume Docker, avant premier démarrage) plutôt que copiées
+  manuellement depuis chaque interface — zéro étape manuelle supplémentaire
+- `install.sh --dry-run` affiche toutes les actions sans toucher à Docker
+  ni au réseau — utile pour relire le script avant de l'exécuter pour de vrai
+- `REF` (branche/tag ciblé par `install.sh`) vaut `main` tant qu'aucune
+  release taguée n'existe — dette assumée, à corriger dès la première
+  release (cf. `docs/superpowers/specs/2026-08-18-install-sh-design.md`)
+
 Contraintes :
 - Idempotent : relancer le script sur une install existante ne doit rien casser
   (détecter une install déjà présente, proposer mise à jour plutôt que ré-install)
