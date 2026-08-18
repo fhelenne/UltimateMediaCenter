@@ -4,6 +4,7 @@ set -euo pipefail
 RCLONE_REMOTE="${RCLONE_REMOTE:-}"
 RCLONE_CONFIG_DIR="${RCLONE_CONFIG_DIR:-$HOME/.config/rclone}"
 TARGET_DIR="${TARGET_DIR:-$HOME/ultimatemediacenter}"
+RETENTION_DAYS="${RETENTION_DAYS:-14}"
 LOG_FILE="${TARGET_DIR}/backup.log"
 RCLONE_EXTRA_MOUNTS=()
 work_dir=""
@@ -53,6 +54,22 @@ push_backup() {
   RCLONE_EXTRA_MOUNTS=()
 }
 
+prune_old_backups() {
+  local cutoff entry
+  cutoff="$(date -d "-${RETENTION_DAYS} days" +%Y-%m-%d)"
+  if [[ "$RCLONE_REMOTE" == /* ]]; then
+    RCLONE_EXTRA_MOUNTS=(-v "${RCLONE_REMOTE}:${RCLONE_REMOTE}")
+  fi
+  rclone lsf "$RCLONE_REMOTE" --dirs-only 2>/dev/null | while read -r entry; do
+    entry="${entry%/}"
+    if [[ "$entry" < "$cutoff" ]]; then
+      log "Suppression de la sauvegarde expirée : ${entry}"
+      rclone purge "${RCLONE_REMOTE}/${entry}"
+    fi
+  done
+  RCLONE_EXTRA_MOUNTS=()
+}
+
 main() {
   mkdir -p "$TARGET_DIR"
   exec >> "$LOG_FILE" 2>&1
@@ -62,6 +79,7 @@ main() {
   trap 'rm -rf "$work_dir"' EXIT
   archive_volumes "$work_dir"
   push_backup "$work_dir"
+  prune_old_backups
   log "=== Sauvegarde terminée ==="
 }
 
