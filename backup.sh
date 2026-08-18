@@ -44,7 +44,8 @@ archive_volumes() {
 
 push_backup() {
   local work_dir="$1"
-  local dest="${RCLONE_REMOTE}/$(date +%Y-%m-%d)/"
+  local dest
+  dest="${RCLONE_REMOTE}/$(date +%Y-%m-%d)/"
   log "Envoi vers ${dest}..."
   RCLONE_EXTRA_MOUNTS=(-v "${work_dir}:/data")
   if [[ "$RCLONE_REMOTE" == /* ]]; then
