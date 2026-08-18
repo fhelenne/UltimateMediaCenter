@@ -67,6 +67,57 @@ fetch_release() {
   fi
 }
 
+random_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+  else
+    head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'
+  fi
+}
+
+detect_usb_mount() {
+  local candidate
+  for candidate in /media/*/* /mnt/*; do
+    if [ -d "$candidate" ] && [ -w "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+generate_env() {
+  local usb_mount
+  if usb_mount=$(detect_usb_mount); then
+    log "Disque USB détecté automatiquement : $usb_mount"
+  else
+    read -r -p "Point de montage du disque USB pour la bibliothèque média : " usb_mount
+  fi
+
+  local sonarr_api_key radarr_api_key lidarr_api_key readarr_api_key
+  sonarr_api_key=$(random_secret)
+  radarr_api_key=$(random_secret)
+  lidarr_api_key=$(random_secret)
+  readarr_api_key=$(random_secret)
+
+  sed \
+    -e "s#^USB_MOUNT=.*#USB_MOUNT=${usb_mount}#" \
+    -e "s#^SONARR_SECRET=.*#SONARR_SECRET=$(random_secret)#" \
+    -e "s#^RADARR_SECRET=.*#RADARR_SECRET=$(random_secret)#" \
+    -e "s#^LIDARR_SECRET=.*#LIDARR_SECRET=$(random_secret)#" \
+    -e "s#^READARR_SECRET=.*#READARR_SECRET=$(random_secret)#" \
+    -e "s#^SONARR_API_KEY=.*#SONARR_API_KEY=${sonarr_api_key}#" \
+    -e "s#^RADARR_API_KEY=.*#RADARR_API_KEY=${radarr_api_key}#" \
+    -e "s#^LIDARR_API_KEY=.*#LIDARR_API_KEY=${lidarr_api_key}#" \
+    -e "s#^READARR_API_KEY=.*#READARR_API_KEY=${readarr_api_key}#" \
+    -e "s#^SESSION_SECRET=.*#SESSION_SECRET=$(random_secret)#" \
+    "${TARGET_DIR}/.env.example" > "${TARGET_DIR}/.env"
+
+  mkdir -p "${usb_mount}/tv" "${usb_mount}/movies" "${usb_mount}/music" "${usb_mount}/books-library"
+
+  log "Fichier .env généré, secrets et clés API *arr aléatoires écrits."
+}
+
 main() {
   mkdir -p "$TARGET_DIR"
   exec > >(tee -a "$LOG_FILE") 2>&1
@@ -82,6 +133,9 @@ main() {
     FRESH_INSTALL=1
   fi
   fetch_release
+  if [ "$FRESH_INSTALL" -eq 1 ]; then
+    generate_env
+  fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
