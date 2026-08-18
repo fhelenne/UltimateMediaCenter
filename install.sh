@@ -118,6 +118,33 @@ generate_env() {
   log "Fichier .env généré, secrets et clés API *arr aléatoires écrits."
 }
 
+seed_arr_configs() {
+  local service port api_key volume
+  for service in sonarr radarr lidarr readarr; do
+    case "$service" in
+      sonarr) port=8989 ;;
+      radarr) port=7878 ;;
+      lidarr) port=8686 ;;
+      readarr) port=8787 ;;
+    esac
+    api_key=$(grep "^${service^^}_API_KEY=" "${TARGET_DIR}/.env" | cut -d= -f2)
+    volume="ultimatemediacenter_${service}-config"
+    run docker volume create "$volume" >/dev/null
+    run docker run --rm -v "${volume}:/config" alpine sh -c "
+      if [ ! -f /config/config.xml ]; then
+        cat > /config/config.xml <<EOF
+<Config>
+  <LogLevel>info</LogLevel>
+  <Port>${port}</Port>
+  <ApiKey>${api_key}</ApiKey>
+</Config>
+EOF
+      fi
+    "
+  done
+  log "Clés API pré-semées dans les config.xml de sonarr/radarr/lidarr/readarr."
+}
+
 main() {
   mkdir -p "$TARGET_DIR"
   exec > >(tee -a "$LOG_FILE") 2>&1
@@ -135,6 +162,7 @@ main() {
   fetch_release
   if [ "$FRESH_INSTALL" -eq 1 ]; then
     generate_env
+    seed_arr_configs
   fi
 }
 
