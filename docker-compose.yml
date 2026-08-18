@@ -1,3 +1,5 @@
+name: ultimatemediacenter
+
 services:
   app:
     build: .
@@ -31,6 +33,22 @@ services:
     depends_on:
       - app
       - calibre-web
+    restart: unless-stopped
+
+  jellyfin:
+    image: linuxserver/jellyfin:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    ports:
+      - "8096:8096"
+    volumes:
+      - jellyfin-config:/config
+      - sonarr-tv:/data/tv:ro
+      - radarr-movies:/data/movies:ro
+      - lidarr-music:/data/music:ro
+      - books-library:/data/books:ro
     restart: unless-stopped
 
   ntfy:
@@ -108,16 +126,33 @@ volumes:
   ntfy-etc:
   sonarr-config:
   sonarr-tv:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${USB_MOUNT}/tv
   sonarr-downloads:
   radarr-config:
   radarr-movies:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${USB_MOUNT}/movies
   radarr-downloads:
   lidarr-config:
   lidarr-music:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${USB_MOUNT}/music
   lidarr-downloads:
   readarr-config:
   readarr-books:
   readarr-downloads:
   books-library:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${USB_MOUNT}/books-library
   calibre-web-config:
   caddy-data:
+  jellyfin-config:
