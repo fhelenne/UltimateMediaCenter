@@ -46,7 +46,7 @@ Objectif : bout en bout fonctionnel sur le flux le plus simple.
 - [x] Sauvegardes automatisées (config *arr, DB app)
 - [x] Script d'installation one-liner (`install.sh`), idempotent, testé sur
       Raspberry Pi OS vierge — cf. `05-DEPLOYMENT.md`
-- [ ] Documentation utilisateur finale + procédure de mise à jour
+- [x] Documentation utilisateur finale + procédure de mise à jour
 
 ## Interface — décision actée
 SSR + HTMX retenu (ADR 0001). Prévoir tout de même une maquette basse fidélité
