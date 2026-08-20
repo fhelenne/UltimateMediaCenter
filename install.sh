@@ -130,6 +130,10 @@ generate_env() {
     read -r -p "Point de montage du disque USB pour la bibliothèque média : " usb_mount < /dev/tty
   fi
 
+  local host_library_root
+  read -r -p "Dossier racine pour les bibliothèques ajoutées depuis l'UI (défaut : \$HOME) : " host_library_root < /dev/tty
+  host_library_root="${host_library_root:-$HOME}"
+
   local sonarr_api_key radarr_api_key lidarr_api_key readarr_api_key
   sonarr_api_key=$(random_secret)
   radarr_api_key=$(random_secret)
@@ -138,6 +142,8 @@ generate_env() {
 
   sed \
     -e "s#^USB_MOUNT=.*#USB_MOUNT=${usb_mount}#" \
+    -e "s#^HOST_LIBRARY_ROOT=.*#HOST_LIBRARY_ROOT=${host_library_root}#" \
+    -e "s#^SHARES_MOUNT=.*#SHARES_MOUNT=${TARGET_DIR}/shares#" \
     -e "s#^SONARR_SECRET=.*#SONARR_SECRET=$(random_secret)#" \
     -e "s#^RADARR_SECRET=.*#RADARR_SECRET=$(random_secret)#" \
     -e "s#^LIDARR_SECRET=.*#LIDARR_SECRET=$(random_secret)#" \
@@ -151,6 +157,7 @@ generate_env() {
   mv "${TARGET_DIR}/.env.tmp" "${TARGET_DIR}/.env"
 
   mkdir -p "${usb_mount}/tv" "${usb_mount}/movies" "${usb_mount}/music" "${usb_mount}/books-library"
+  mkdir -p "${TARGET_DIR}/shares"
 
   log "Fichier .env généré, secrets et clés API *arr aléatoires écrits."
 }
