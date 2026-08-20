@@ -12,8 +12,9 @@ Sur un Raspberry Pi OS 64 bits vierge :
 curl -sSL https://raw.githubusercontent.com/fhelenne/UltimateMediaCenter/main/install.sh | bash
 ```
 
-Génère les secrets, démarre la stack Docker, affiche l'URL et le mot de
-passe admin initial en fin d'installation.
+Installe Docker automatiquement si absent, génère les secrets, démarre la
+stack, affiche l'URL et le mot de passe admin initial en fin
+d'installation — aucun pré-requis à installer soi-même.
 
 ## Fonctionnalités
 
