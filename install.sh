@@ -26,15 +26,24 @@ done
 
 LOG_FILE="${TARGET_DIR}/install.log"
 
+# fd 3 keeps a handle on the real terminal so log() can still print step
+# messages after main() redirects stdout/stderr into the log file — this
+# is what keeps the install quiet (raw command output goes to the file
+# only) while step messages and the final summary still show live.
+exec 3>&1
+
 log() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') $*"
+  local msg
+  msg="$(date '+%Y-%m-%d %H:%M:%S') $*"
+  echo "$msg" >&3
+  echo "$msg"
 }
 
 run() {
   if [ "$DRY_RUN" -eq 1 ]; then
     log "[dry-run] $*"
   else
-    log "+ $*"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') + $*"
     "$@"
   fi
 }
@@ -203,6 +212,45 @@ up() {
   run docker compose --project-directory "$TARGET_DIR" up -d --build
 }
 
+sync_arr_api_keys() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] sync_arr_api_keys: aurait resynchronisé les clés API *arr"
+    return
+  fi
+
+  local service upper key current changed container _attempt
+  changed=0
+  for service in sonarr radarr lidarr readarr; do
+    upper=$(echo "$service" | tr '[:lower:]' '[:upper:]')
+    container="ultimatemediacenter-${service}-1"
+    key=""
+    for _attempt in $(seq 1 15); do
+      key=$(docker exec "$container" grep -o '<ApiKey>[^<]*' /config/config.xml 2>/dev/null | cut -d'>' -f2 || true)
+      if [ -n "$key" ]; then
+        break
+      fi
+      sleep 2
+    done
+    if [ -z "$key" ]; then
+      log "AVERTISSEMENT : clé API de ${service} introuvable, resynchronisation ignorée."
+      continue
+    fi
+    current=$(grep "^${upper}_API_KEY=" "${TARGET_DIR}/.env" | cut -d= -f2)
+    if [ "$current" != "$key" ]; then
+      # ${service} régénère sa propre clé au premier démarrage réel et
+      # écrase notre pré-semis (config.xml complété avec des champs qu'on
+      # ne fournit pas) — on relit la vraie clé et on met .env à jour.
+      sed -i "s#^${upper}_API_KEY=.*#${upper}_API_KEY=${key}#" "${TARGET_DIR}/.env"
+      changed=1
+    fi
+  done
+
+  if [ "$changed" -eq 1 ]; then
+    log "Clés API *arr resynchronisées dans .env, redémarrage de l'application..."
+    run docker compose --project-directory "$TARGET_DIR" restart app
+  fi
+}
+
 summary() {
   local admin_password url
   url="http://$(hostname -I 2>/dev/null | awk '{print $1}'):8000"
@@ -211,7 +259,7 @@ summary() {
   log "URL locale : ${url}"
   if [ "$DRY_RUN" -eq 0 ]; then
     local _attempt
-    for _attempt in $(seq 1 15); do
+    for __attempt in $(seq 1 15); do
       admin_password=$(docker compose --project-directory "$TARGET_DIR" logs app 2>/dev/null \
         | grep -o "mot de passe initial: [^ ]*" | tail -n1 | cut -d' ' -f5 || true)
       if [ -n "$admin_password" ]; then
@@ -233,7 +281,7 @@ summary() {
 main() {
   mkdir -p "$TARGET_DIR"
   umask 077
-  exec > >(tee -a "$LOG_FILE") 2>&1
+  exec >> "$LOG_FILE" 2>&1
   if [ "$REF" = "main" ]; then
     log "ATTENTION : aucune release taguée disponible, utilisation de la branche main."
   fi
@@ -251,6 +299,9 @@ main() {
     seed_arr_configs
   fi
   up
+  if [ "$FRESH_INSTALL" -eq 1 ]; then
+    sync_arr_api_keys
+  fi
   summary
 }
 
