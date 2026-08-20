@@ -35,6 +35,12 @@ un compte admin unique, table `users` dans le même fichier SQLite que le
 cache de l'orchestrateur. Protège toutes les routes UI ; les webhooks en sont
 exclus (authentification propre par secret partagé, cf. ADR 0002).
 
+### 6. Gestion des dossiers de bibliothèque
+Le container `app` est privilégié (`CAP_SYS_ADMIN`) pour monter des
+partages SMB ajoutés depuis l'UI (`mount -t cifs`, propagation `shared`
+vers l'hôte). Les dossiers ajoutés (locaux ou SMB) sont enregistrés comme
+root folders via l'API déjà exposée par chaque *arr — voir ADR 0005.
+
 ## Flux de données principaux
 1. Dépôt fichier → *arr scanne → matche → notifie ton appli (webhook) → notif push
 2. Utilisateur ouvre l'UI → orchestrateur interroge les *arr → affichage unifié

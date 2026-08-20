@@ -41,6 +41,21 @@ titre, mauvaise version) :
    par le *arr concerné
 3. Valider — le fichier est réorganisé côté *arr sans quitter l'appli
 
+## Ajouter un dossier ou un partage réseau
+
+Sur chaque onglet, un formulaire en bas de page permet d'ajouter un
+dossier (chemin sous ta racine bibliothèque) ou un partage réseau SMB
+(serveur, partage, identifiants). Une fois ajouté, il apparaît directement
+dans le *arr concerné comme un nouveau dossier surveillé.
+
+## Exporter / importer la configuration
+
+`/settings/export` télécharge un fichier JSON avec toute ta configuration
+(clés API, dossiers, partages réseau — identifiants inclus en clair,
+à conserver en lieu sûr). `/settings/import` restaure ce fichier sur une
+autre installation ; l'application redémarre automatiquement à la fin de
+l'import.
+
 ## Lien Jellyfin
 
 Quand un élément de la bibliothèque est retrouvé dans Jellyfin, un lien

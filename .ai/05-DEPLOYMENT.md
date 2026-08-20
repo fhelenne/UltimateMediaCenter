@@ -13,6 +13,16 @@ host) et pour la config de chaque service. Le volume `books-library` est
 partagé en lecture-écriture par `app` (scan/enrichissement via `calibredb`) et
 en lecture seule par `calibre-web` (indexation).
 
+## Variables d'environnement
+
+- `USB_MOUNT` : chemin du point de montage du disque USB externe sur l'hôte —
+  utilisé uniquement par docker-compose.yml (driver_opts bind mount des volumes
+  média), jamais lu par l'appli Python elle-même.
+- `HOST_LIBRARY_ROOT` : dossier hôte large monté dans `app` + les *arr +
+  Jellyfin, sert de racine pour tout dossier ajouté depuis l'UI.
+- `SHARES_MOUNT` : dossier technique où l'app monte les partages SMB
+  ajoutés depuis l'UI (`mount -t cifs`), monté avec propagation `shared`.
+
 ## Build multi-architecture
 - `docker buildx build --platform linux/arm64` pour produire l'image depuis
   une machine x86 (évite de builder directement sur le Pi, lent)
