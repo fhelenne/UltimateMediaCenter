@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     cache_ttl: int = 30
     db_path: str = "data/cache.db"
     calibre_library_path: str = "data/calibre-library"
+    host_library_root: str = "/library-root"
+    shares_mount: str = "/library-root/shares"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
