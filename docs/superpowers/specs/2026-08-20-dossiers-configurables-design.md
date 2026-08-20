@@ -105,6 +105,66 @@ Ajout d'une étape : lire tous les `smb_shares` où `mounted=1`, retenter le
 mount de chacun (best-effort, log une erreur par échec sans bloquer le
 démarrage de l'app).
 
+## Export / Import de configuration
+
+Objectif : sauvegarder/restaurer toute la config pilotée par l'app —
+`.env` (URLs, clés API *arr, secrets webhook, Jellyfin, ntfy) +
+`library_folders` + `smb_shares` — en un fichier JSON portable, réimportable
+sur la même install ou une autre. **Exclu explicitement** : la table
+`users` (compte admin) — un import ne doit jamais pouvoir modifier ou
+invalider les identifiants de connexion en place, pour ne pas risquer de
+verrouiller l'accès.
+
+### Format
+```json
+{
+  "version": 1,
+  "exported_at": "2026-08-20T20:00:00Z",
+  "env": {
+    "SONARR_URL": "...", "SONARR_API_KEY": "...", "SONARR_SECRET": "...",
+    "RADARR_URL": "...", "...": "...",
+    "JELLYFIN_URL": "...", "JELLYFIN_API_KEY": "...",
+    "NTFY_URL": "...", "NTFY_TOPIC": "..."
+  },
+  "library_folders": [{"arr": "sonarr", "path": "/library-root/..."}],
+  "smb_shares": [{"slug": "...", "server": "...", "share": "...", "username": "...", "password": "..."}]
+}
+```
+`SESSION_SECRET` et `USB_MOUNT`/`HOST_LIBRARY_ROOT`/`SHARES_MOUNT` (chemins
+propres à *cette* machine) sont exclus de l'export — les réimporter tels
+quels sur une autre install n'aurait pas de sens ou casserait les mounts
+locaux.
+
+### Endpoints (`app/ui/router.py` ou nouveau `app/settings/router.py`,
+`require_login`)
+- `GET /settings/export` — génère le JSON ci-dessus, `Content-Disposition:
+  attachment`. Avertissement affiché dans l'UI juste avant le téléchargement :
+  "contient des mots de passe en clair (clés API, identifiants SMB) —
+  à stocker en lieu sûr".
+- `POST /settings/import` — upload du fichier JSON.
+  1. Valide `version` (rejette si inconnue).
+  2. Réécrit `.env` (mêmes clés que `env`, pattern temp-file-puis-`mv`
+     déjà utilisé par `install.sh generate_env`) — ne touche jamais
+     `SESSION_SECRET`/`USB_MOUNT`/`HOST_LIBRARY_ROOT`/`SHARES_MOUNT`.
+  3. Vide et recharge `library_folders`/`smb_shares` : réenregistre chaque
+     dossier via l'API root-folder du *arr concerné, remonte chaque partage
+     SMB — mêmes fonctions que la création normale (`app/library/*.py`),
+     donc mêmes erreurs gérées à l'identique (échec = ligne ignorée,
+     rapportée dans la réponse, pas d'arrêt du reste de l'import).
+  4. `.env` a changé → `Settings` (singleton chargé une fois au démarrage)
+     ne peut pas être rechargé à chaud. L'endpoint termine par
+     `os._exit(0)` après avoir répondu — `restart: unless-stopped` du
+     compose relance `app` avec le nouvel `.env`. Le message de succès
+     prévient : "application en cours de redémarrage, rechargez la page
+     dans quelques secondes".
+
+### Tests
+- `tests/settings/test_export_import.py` — export produit le JSON attendu
+  (secrets machine-locale absents) ; import réécrit `.env` correctement,
+  réenregistre dossiers/partages (API + mount mockés comme dans
+  `test_folders.py`/`test_shares.py`), n'écrit jamais dans `users`, rejette
+  une version inconnue.
+
 ## Tests
 - `tests/library/test_folders.py` — CRUD + appel API root-folder mocké
   (respx, comme `tests/arr/*`), cas succès et échec API.
@@ -120,4 +180,5 @@ démarrage de l'app).
   (`HOST_LIBRARY_ROOT`, `SHARES_MOUNT`), capacité `SYS_ADMIN` sur `app`.
 - `install.sh` — prompt du dossier racine local (`HOST_LIBRARY_ROOT`,
   défaut `$HOME`) en plus du prompt USB existant.
-- `docs/user/guide.md` — section "ajouter un dossier / un partage réseau".
+- `docs/user/guide.md` — section "ajouter un dossier / un partage réseau" +
+  section "exporter/importer la configuration".
