@@ -18,7 +18,7 @@ def db(tmp_path, monkeypatch):
 
 @respx.mock
 async def test_queue_hits_api_on_cache_miss(db):
-    respx.get("http://readarr-test:8787/api/v3/queue").mock(
+    respx.get("http://readarr-test:8787/api/v1/queue").mock(
         return_value=httpx.Response(200, json={"records": [{"title": "book1", "status": "queued"}]})
     )
     result = await readarr.queue()
@@ -39,7 +39,7 @@ async def test_queue_returns_cache_on_hit(db):
 
 @respx.mock
 async def test_library_hits_api_on_cache_miss(db):
-    respx.get("http://readarr-test:8787/api/v3/book").mock(
+    respx.get("http://readarr-test:8787/api/v1/book").mock(
         return_value=httpx.Response(200, json=[{"title": "Dune", "monitored": True}])
     )
     result = await readarr.library()
@@ -48,7 +48,7 @@ async def test_library_hits_api_on_cache_miss(db):
 
 @respx.mock
 async def test_queue_returns_none_on_http_error(db):
-    respx.get("http://readarr-test:8787/api/v3/queue").mock(
+    respx.get("http://readarr-test:8787/api/v1/queue").mock(
         side_effect=httpx.TimeoutException("timeout")
     )
     result = await readarr.queue()

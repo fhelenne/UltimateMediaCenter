@@ -18,7 +18,7 @@ def db(tmp_path, monkeypatch):
 
 @respx.mock
 async def test_queue_hits_api_on_cache_miss(db):
-    respx.get("http://lidarr-test:8686/api/v3/queue").mock(
+    respx.get("http://lidarr-test:8686/api/v1/queue").mock(
         return_value=httpx.Response(200, json={"records": [{"title": "album1", "status": "queued"}]})
     )
     result = await lidarr.queue()
@@ -39,7 +39,7 @@ async def test_queue_returns_cache_on_hit(db):
 
 @respx.mock
 async def test_library_hits_api_on_cache_miss(db):
-    respx.get("http://lidarr-test:8686/api/v3/artist").mock(
+    respx.get("http://lidarr-test:8686/api/v1/artist").mock(
         return_value=httpx.Response(200, json=[{"artistName": "Radiohead", "monitored": True}])
     )
     result = await lidarr.library()
@@ -48,7 +48,7 @@ async def test_library_hits_api_on_cache_miss(db):
 
 @respx.mock
 async def test_queue_returns_none_on_http_error(db):
-    respx.get("http://lidarr-test:8686/api/v3/queue").mock(
+    respx.get("http://lidarr-test:8686/api/v1/queue").mock(
         side_effect=httpx.TimeoutException("timeout")
     )
     result = await lidarr.queue()

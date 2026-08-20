@@ -16,7 +16,7 @@ async def queue() -> list[dict] | None:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{settings.lidarr_url}/api/v3/queue",
+                f"{settings.lidarr_url}/api/v1/queue",
                 headers={"X-Api-Key": settings.lidarr_api_key},
                 params={"pageSize": 100},
                 timeout=5.0,
@@ -38,7 +38,7 @@ async def library() -> list[dict] | None:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{settings.lidarr_url}/api/v3/artist",
+                f"{settings.lidarr_url}/api/v1/artist",
                 headers={"X-Api-Key": settings.lidarr_api_key},
                 timeout=5.0,
             )
