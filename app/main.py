@@ -13,6 +13,7 @@ from app.auth.router import RedirectToChangePassword, RedirectToLogin
 from app.config import settings
 from app.library import db as library_db
 from app.library import shares as library_shares
+from app.settings import router as settings_router
 from app.ui import router as ui_router
 from app.webhooks import lidarr, radarr, readarr, sonarr
 
@@ -54,6 +55,7 @@ app.include_router(lidarr.router)
 app.include_router(readarr.router)
 app.include_router(auth_router.router)
 app.include_router(ui_router.router)
+app.include_router(settings_router.router)
 
 
 @app.exception_handler(RedirectToLogin)
