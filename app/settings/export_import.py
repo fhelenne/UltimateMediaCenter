@@ -23,7 +23,7 @@ _ARRS = ["sonarr", "radarr", "lidarr", "readarr"]
 
 
 def build_export(db_path: str) -> dict:
-    env = {key: getattr(settings, key.lower()) for key in _ENV_KEYS}
+    env = {key: getattr(settings, key.lower()) for key in _ENV_KEYS if key not in _EXCLUDED_ENV_KEYS}
 
     folders = []
     for arr in _ARRS:

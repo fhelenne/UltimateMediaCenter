@@ -44,6 +44,22 @@ def test_build_export_includes_folders_and_shares_with_password(db_path):
     ]
 
 
+def test_build_export_filters_excluded_keys_even_if_in_env_keys(db_path, monkeypatch):
+    # Defense in depth: even if a sensitive key is accidentally added to _ENV_KEYS,
+    # it should still be excluded from the export via _EXCLUDED_ENV_KEYS
+    original_env_keys = export_import._ENV_KEYS.copy()
+    try:
+        # Temporarily add a sensitive key to _ENV_KEYS
+        monkeypatch.setattr(export_import, "_ENV_KEYS", original_env_keys + ["SESSION_SECRET"])
+        data = export_import.build_export(db_path)
+        # SESSION_SECRET should still not appear in the export
+        assert "SESSION_SECRET" not in data["env"]
+        # But other keys should still be present
+        assert "SONARR_API_KEY" in data["env"]
+    finally:
+        monkeypatch.setattr(export_import, "_ENV_KEYS", original_env_keys)
+
+
 async def test_apply_import_rejects_unknown_version(db_path):
     result = await export_import.apply_import(db_path, {"version": 99})
     assert result["errors"] == ["version d'export non supportée"]
