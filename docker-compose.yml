@@ -106,10 +106,11 @@ services:
     restart: unless-stopped
 
   readarr:
-    image: lscr.io/linuxserver/readarr:develop
+    image: binhex/arch-readarr
     environment:
       - PUID=1000
       - PGID=1000
+      - UMASK=000
       - TZ=Europe/Paris
     ports:
       - "8787:8787"
