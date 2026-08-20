@@ -11,6 +11,8 @@ from app.auth import auth
 from app.auth import router as auth_router
 from app.auth.router import RedirectToChangePassword, RedirectToLogin
 from app.config import settings
+from app.library import db as library_db
+from app.library import shares as library_shares
 from app.ui import router as ui_router
 from app.webhooks import lidarr, radarr, readarr, sonarr
 
@@ -25,6 +27,8 @@ async def lifespan(app: FastAPI):
     password = auth.bootstrap_admin(settings.db_path)
     if password is not None:
         logger.warning("Compte admin créé, mot de passe initial: %s", password)
+    library_db.init_db(settings.db_path)
+    await library_shares.remount_all(settings.db_path)
     yield
 
 
