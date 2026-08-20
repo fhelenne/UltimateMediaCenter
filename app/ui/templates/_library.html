@@ -1,0 +1,17 @@
+<div id="library-{{ arr }}">
+  {% if error %}<p class="error">Erreur lors de l'opération sur le dossier.</p>{% endif %}
+  <ul>
+    {% for f in folders %}
+    <li>
+      {{ f.path }}
+      <button hx-delete="/library/{{ arr }}/folders/{{ f.id }}" hx-target="#library-{{ arr }}" hx-swap="outerHTML">
+        Retirer
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+  <form hx-post="/library/{{ arr }}/folders" hx-target="#library-{{ arr }}" hx-swap="outerHTML">
+    <input type="text" name="path" placeholder="/library-root/..." required>
+    <button type="submit">Ajouter</button>
+  </form>
+</div>

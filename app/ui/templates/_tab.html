@@ -75,3 +75,5 @@
 <div id="rematch-modal"></div>
 
 {% endif %}
+
+<div hx-get="/library/{{ arr }}" hx-trigger="load" hx-swap="outerHTML"></div>

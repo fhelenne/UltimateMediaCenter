@@ -40,6 +40,7 @@ def db_path(tmp_path, monkeypatch):
     from app.arr import cache
     from app.auth import auth
     from app.config import settings
+    from app.library import db as library_db
 
     path = str(tmp_path / "test.db")
     monkeypatch.setattr(settings, "db_path", path)
@@ -47,4 +48,5 @@ def db_path(tmp_path, monkeypatch):
     # tables the app's lifespan would normally create are initialized here.
     auth.init_db(path)
     cache.init_db(path)
+    library_db.init_db(path)
     return path

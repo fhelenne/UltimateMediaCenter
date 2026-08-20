@@ -10,6 +10,8 @@ from app.arr import lidarr, radarr, readarr, sonarr
 from app.auth.router import require_login
 from app.config import settings
 from app.jellyfin import client as jellyfin
+from app.library import folders as library_folders
+from app.library import shares as library_shares
 from app.rematch import rematch
 
 router = APIRouter()
@@ -134,3 +136,79 @@ async def rematch_apply(
     chosen = result[candidate_index]
     success = await rematch.apply(arr, item, chosen)
     return templates.TemplateResponse(request, "_rematch_result.html", {"success": success})
+
+
+@router.get("/library/shares", response_class=HTMLResponse)
+async def shares_list(request: Request, user: dict = Depends(require_login)) -> HTMLResponse:
+    items = library_shares.list_shares(settings.db_path)
+    return templates.TemplateResponse(
+        request, "_shares.html", {"shares": items, "error": False}
+    )
+
+
+@router.post("/library/shares", response_class=HTMLResponse)
+async def shares_add(
+    request: Request,
+    slug: str = Form(...),
+    server: str = Form(...),
+    share: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    user: dict = Depends(require_login),
+) -> HTMLResponse:
+    result = await library_shares.add_share(settings.db_path, slug, server, share, username, password)
+    items = library_shares.list_shares(settings.db_path)
+    return templates.TemplateResponse(
+        request, "_shares.html", {"shares": items, "error": result is None}
+    )
+
+
+@router.delete("/library/shares/{share_id}", response_class=HTMLResponse)
+async def shares_remove(
+    request: Request, share_id: int, user: dict = Depends(require_login)
+) -> HTMLResponse:
+    result = await library_shares.remove_share(settings.db_path, share_id)
+    if result is None:
+        return HTMLResponse("Partage encore utilisé par un dossier", status_code=400)
+    items = library_shares.list_shares(settings.db_path)
+    return templates.TemplateResponse(
+        request, "_shares.html", {"shares": items, "error": False}
+    )
+
+
+@router.get("/library/{arr}", response_class=HTMLResponse)
+async def library_list(
+    request: Request, arr: str, user: dict = Depends(require_login)
+) -> HTMLResponse:
+    if arr not in _CLIENTS:
+        return HTMLResponse("Not found", status_code=404)
+    items = library_folders.list_folders(settings.db_path, arr)
+    return templates.TemplateResponse(
+        request, "_library.html", {"arr": arr, "folders": items, "error": False}
+    )
+
+
+@router.post("/library/{arr}/folders", response_class=HTMLResponse)
+async def library_add_folder(
+    request: Request, arr: str, path: str = Form(...), user: dict = Depends(require_login)
+) -> HTMLResponse:
+    if arr not in _CLIENTS:
+        return HTMLResponse("Not found", status_code=404)
+    result = await library_folders.add_folder(settings.db_path, arr, path)
+    items = library_folders.list_folders(settings.db_path, arr)
+    return templates.TemplateResponse(
+        request, "_library.html", {"arr": arr, "folders": items, "error": result is None}
+    )
+
+
+@router.delete("/library/{arr}/folders/{folder_id}", response_class=HTMLResponse)
+async def library_remove_folder(
+    request: Request, arr: str, folder_id: int, user: dict = Depends(require_login)
+) -> HTMLResponse:
+    if arr not in _CLIENTS:
+        return HTMLResponse("Not found", status_code=404)
+    await library_folders.remove_folder(settings.db_path, folder_id)
+    items = library_folders.list_folders(settings.db_path, arr)
+    return templates.TemplateResponse(
+        request, "_library.html", {"arr": arr, "folders": items, "error": False}
+    )

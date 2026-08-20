@@ -1,0 +1,21 @@
+<div id="shares-list">
+  {% if error %}<p class="error">Erreur lors de l'opération sur le partage.</p>{% endif %}
+  <ul>
+    {% for s in shares %}
+    <li>
+      {{ s.slug }} ({{ s.server }}/{{ s.share }})
+      <button hx-delete="/library/shares/{{ s.id }}" hx-target="#shares-list" hx-swap="outerHTML">
+        Retirer
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+  <form hx-post="/library/shares" hx-target="#shares-list" hx-swap="outerHTML">
+    <input type="text" name="slug" placeholder="nom" required>
+    <input type="text" name="server" placeholder="serveur" required>
+    <input type="text" name="share" placeholder="partage" required>
+    <input type="text" name="username" placeholder="utilisateur" required>
+    <input type="password" name="password" placeholder="mot de passe" required>
+    <button type="submit">Monter</button>
+  </form>
+</div>
