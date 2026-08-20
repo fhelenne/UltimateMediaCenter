@@ -6,9 +6,19 @@ services:
     env_file: .env
     depends_on:
       - ntfy
+    cap_add:
+      - SYS_ADMIN
     volumes:
       - app-data:/app/data
       - books-library:/books
+      - type: bind
+        source: ${HOST_LIBRARY_ROOT}
+        target: /library-root
+      - type: bind
+        source: ${SHARES_MOUNT}
+        target: /library-root/shares
+        bind:
+          propagation: shared
     restart: unless-stopped
 
   calibre-web:
@@ -49,6 +59,12 @@ services:
       - radarr-movies:/data/movies:ro
       - lidarr-music:/data/music:ro
       - books-library:/data/books:ro
+      - type: bind
+        source: ${HOST_LIBRARY_ROOT}
+        target: /library-root
+      - type: bind
+        source: ${SHARES_MOUNT}
+        target: /library-root/shares
     restart: unless-stopped
 
   ntfy:
@@ -75,6 +91,12 @@ services:
       - sonarr-config:/config
       - sonarr-tv:/tv
       - sonarr-downloads:/downloads
+      - type: bind
+        source: ${HOST_LIBRARY_ROOT}
+        target: /library-root
+      - type: bind
+        source: ${SHARES_MOUNT}
+        target: /library-root/shares
     restart: unless-stopped
 
   radarr:
@@ -89,6 +111,12 @@ services:
       - radarr-config:/config
       - radarr-movies:/movies
       - radarr-downloads:/downloads
+      - type: bind
+        source: ${HOST_LIBRARY_ROOT}
+        target: /library-root
+      - type: bind
+        source: ${SHARES_MOUNT}
+        target: /library-root/shares
     restart: unless-stopped
 
   lidarr:
@@ -103,6 +131,12 @@ services:
       - lidarr-config:/config
       - lidarr-music:/music
       - lidarr-downloads:/downloads
+      - type: bind
+        source: ${HOST_LIBRARY_ROOT}
+        target: /library-root
+      - type: bind
+        source: ${SHARES_MOUNT}
+        target: /library-root/shares
     restart: unless-stopped
 
   readarr:
@@ -119,6 +153,12 @@ services:
       - readarr-books:/books
       - readarr-downloads:/downloads
       - books-library:/books-library
+      - type: bind
+        source: ${HOST_LIBRARY_ROOT}
+        target: /library-root
+      - type: bind
+        source: ${SHARES_MOUNT}
+        target: /library-root/shares
     restart: unless-stopped
 
 volumes:
