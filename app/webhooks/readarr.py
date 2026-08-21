@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from app.config import settings
@@ -6,6 +7,7 @@ from app.ebooks import ebooks
 from app.webhooks.base import ArrEvent, handle_webhook
 
 router = APIRouter()
+_security = HTTPBasic(auto_error=False)
 
 
 class ReadarrAuthor(BaseModel):
@@ -42,8 +44,9 @@ async def _scan(event: ReadarrEvent) -> None:
 @router.post("/webhook/readarr")
 async def readarr_webhook(
     event: ReadarrEvent,
-    x_readarr_secret: str | None = Header(default=None),
+    credentials: HTTPBasicCredentials | None = Depends(_security),
 ) -> dict[str, str]:
+    secret = credentials.password if credentials else None
     return await handle_webhook(
-        event, x_readarr_secret, settings.readarr_secret, _format, on_download_extra=_scan
+        event, secret, settings.readarr_secret, _format, on_download_extra=_scan
     )

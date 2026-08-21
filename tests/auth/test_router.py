@@ -149,7 +149,7 @@ async def test_webhook_route_accessible_without_session(client: AsyncClient, db_
     response = await client.post(
         "/webhook/sonarr",
         json={"eventType": "Test"},
-        headers={"X-Sonarr-Secret": "test-secret"},
+        auth=("webhook", "test-secret"),
     )
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}

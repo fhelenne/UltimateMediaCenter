@@ -18,7 +18,7 @@ async def test_download_returns_200(client: AsyncClient) -> None:
         response = await client.post(
             "/webhook/lidarr",
             json=DOWNLOAD_PAYLOAD,
-            headers={"X-Lidarr-Secret": VALID_SECRET},
+            auth=("webhook", VALID_SECRET),
         )
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -32,7 +32,7 @@ async def test_download_sends_correct_notification(client: AsyncClient) -> None:
         await client.post(
             "/webhook/lidarr",
             json=DOWNLOAD_PAYLOAD,
-            headers={"X-Lidarr-Secret": VALID_SECRET},
+            auth=("webhook", VALID_SECRET),
         )
     assert ntfy_route.called
     req = ntfy_route.calls[0].request
@@ -54,7 +54,7 @@ async def test_first_album_used_when_multiple(client: AsyncClient) -> None:
         await client.post(
             "/webhook/lidarr",
             json=payload,
-            headers={"X-Lidarr-Secret": VALID_SECRET},
+            auth=("webhook", VALID_SECRET),
         )
     req = ntfy_route.calls[0].request
     assert req.headers["Title"] == "Radiohead — OK Computer"
@@ -64,7 +64,7 @@ async def test_test_event_returns_ok(client: AsyncClient) -> None:
     response = await client.post(
         "/webhook/lidarr",
         json={"eventType": "Test"},
-        headers={"X-Lidarr-Secret": VALID_SECRET},
+        auth=("webhook", VALID_SECRET),
     )
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -74,6 +74,6 @@ async def test_malformed_payload_returns_422(client: AsyncClient) -> None:
     response = await client.post(
         "/webhook/lidarr",
         json={"eventType": "UnknownEvent"},
-        headers={"X-Lidarr-Secret": VALID_SECRET},
+        auth=("webhook", VALID_SECRET),
     )
     assert response.status_code == 422

@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from app.config import settings
 from app.webhooks.base import ArrEvent, handle_webhook
 
 router = APIRouter()
+_security = HTTPBasic(auto_error=False)
 
 
 class RadarrMovie(BaseModel):
@@ -30,6 +32,7 @@ def _format(event: RadarrEvent) -> tuple[str, str]:
 @router.post("/webhook/radarr")
 async def radarr_webhook(
     event: RadarrEvent,
-    x_radarr_secret: str | None = Header(default=None),
+    credentials: HTTPBasicCredentials | None = Depends(_security),
 ) -> dict[str, str]:
-    return await handle_webhook(event, x_radarr_secret, settings.radarr_secret, _format)
+    secret = credentials.password if credentials else None
+    return await handle_webhook(event, secret, settings.radarr_secret, _format)

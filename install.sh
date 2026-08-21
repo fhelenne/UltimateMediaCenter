@@ -258,6 +258,44 @@ sync_arr_api_keys() {
   fi
 }
 
+seed_arr_webhooks() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] seed_arr_webhooks: aurait enregistré la connexion webhook dans chaque *arr"
+    return
+  fi
+
+  # Chaque *arr n'accepte pas de header custom pour son webhook Connect —
+  # seulement URL/méthode/utilisateur/mot de passe. Le secret partagé passe
+  # donc par le mot de passe en Basic Auth (côté app : app/webhooks/base.py).
+  local service upper api_key secret port api_version event_field existing
+  for service in sonarr radarr lidarr readarr; do
+    upper=$(echo "$service" | tr '[:lower:]' '[:upper:]')
+    case "$service" in
+      sonarr) port=8989; api_version=v3; event_field=onDownload ;;
+      radarr) port=7878; api_version=v3; event_field=onDownload ;;
+      lidarr) port=8686; api_version=v1; event_field=onReleaseImport ;;
+      readarr) port=8787; api_version=v1; event_field=onReleaseImport ;;
+    esac
+    api_key=$(grep "^${upper}_API_KEY=" "${TARGET_DIR}/.env" | cut -d= -f2)
+    secret=$(grep "^${upper}_SECRET=" "${TARGET_DIR}/.env" | cut -d= -f2)
+
+    existing=$(docker run --rm --network ultimatemediacenter_default alpine sh -c "
+      wget -qO- --header='X-Api-Key: ${api_key}' http://${service}:${port}/api/${api_version}/notification
+    " 2>/dev/null || true)
+    if echo "$existing" | grep -q '"name":"UltimateMediaCenter"'; then
+      log "Webhook déjà enregistré dans ${service}, ignoré."
+      continue
+    fi
+
+    run docker run --rm --network ultimatemediacenter_default alpine sh -c "
+      wget -qO- --header='X-Api-Key: ${api_key}' --header='Content-Type: application/json' \
+        --post-data='{\"name\":\"UltimateMediaCenter\",\"implementation\":\"Webhook\",\"configContract\":\"WebhookSettings\",\"fields\":[{\"name\":\"url\",\"value\":\"http://app:8000/webhook/${service}\"},{\"name\":\"method\",\"value\":1},{\"name\":\"username\",\"value\":\"webhook\"},{\"name\":\"password\",\"value\":\"${secret}\"}],\"${event_field}\":true,\"onGrab\":false,\"onUpgrade\":true,\"onRename\":false,\"onHealthIssue\":false,\"onApplicationUpdate\":false,\"tags\":[]}' \
+        http://${service}:${port}/api/${api_version}/notification
+    " >/dev/null
+  done
+  log "Webhooks enregistrés dans sonarr/radarr/lidarr/readarr."
+}
+
 summary() {
   local admin_password url
   url="http://$(hostname -I 2>/dev/null | awk '{print $1}'):8000"
@@ -309,6 +347,7 @@ main() {
   if [ "$FRESH_INSTALL" -eq 1 ]; then
     sync_arr_api_keys
   fi
+  seed_arr_webhooks
   summary
 }
 
