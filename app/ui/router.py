@@ -1,4 +1,6 @@
 import asyncio
+import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -8,11 +10,13 @@ from fastapi.templating import Jinja2Templates
 
 from app.arr import lidarr, radarr, readarr, sonarr
 from app.auth.router import require_login
-from app.config import settings
+from app.config import HOST_LIBRARY_ROOT, SHARES_MOUNT, settings
 from app.jellyfin import client as jellyfin
 from app.library import folders as library_folders
 from app.library import shares as library_shares
 from app.rematch import rematch
+
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
@@ -156,6 +160,12 @@ async def shares_add(
     password: str = Form(...),
     user: dict = Depends(require_login),
 ) -> HTMLResponse:
+    if not _SLUG_RE.match(slug):
+        return HTMLResponse("Nom de partage invalide", status_code=400)
+    if "," in server or "," in share or "," in username:
+        return HTMLResponse(
+            "Virgule interdite dans serveur/partage/utilisateur", status_code=400
+        )
     result = await library_shares.add_share(settings.db_path, slug, server, share, username, password)
     items = library_shares.list_shares(settings.db_path)
     return templates.TemplateResponse(
@@ -171,6 +181,10 @@ async def shares_remove(
     if result is None:
         return HTMLResponse("Partage encore utilisé par un dossier", status_code=400)
     items = library_shares.list_shares(settings.db_path)
+    if result is False:
+        return templates.TemplateResponse(
+            request, "_shares.html", {"shares": items, "error": True}, status_code=502
+        )
     return templates.TemplateResponse(
         request, "_shares.html", {"shares": items, "error": False}
     )
@@ -188,13 +202,27 @@ async def library_list(
     )
 
 
+def _under_allowed_root(path: str) -> bool:
+    normalized = os.path.normpath(path)
+    for root in (HOST_LIBRARY_ROOT, SHARES_MOUNT):
+        root = root.rstrip("/")
+        if normalized == root or normalized.startswith(root + "/"):
+            return True
+    return False
+
+
 @router.post("/library/{arr}/folders", response_class=HTMLResponse)
 async def library_add_folder(
     request: Request, arr: str, path: str = Form(...), user: dict = Depends(require_login)
 ) -> HTMLResponse:
     if arr not in _CLIENTS:
         return HTMLResponse("Not found", status_code=404)
-    result = await library_folders.add_folder(settings.db_path, arr, path)
+    normalized = os.path.normpath(path)
+    if not _under_allowed_root(normalized):
+        return HTMLResponse(
+            f"Le dossier doit être un sous-chemin de {HOST_LIBRARY_ROOT}", status_code=400
+        )
+    result = await library_folders.add_folder(settings.db_path, arr, normalized)
     items = library_folders.list_folders(settings.db_path, arr)
     return templates.TemplateResponse(
         request, "_library.html", {"arr": arr, "folders": items, "error": result is None}
@@ -207,8 +235,8 @@ async def library_remove_folder(
 ) -> HTMLResponse:
     if arr not in _CLIENTS:
         return HTMLResponse("Not found", status_code=404)
-    await library_folders.remove_folder(settings.db_path, folder_id)
+    success = await library_folders.remove_folder(settings.db_path, folder_id)
     items = library_folders.list_folders(settings.db_path, arr)
     return templates.TemplateResponse(
-        request, "_library.html", {"arr": arr, "folders": items, "error": False}
+        request, "_library.html", {"arr": arr, "folders": items, "error": not success}
     )

@@ -13,6 +13,14 @@
             </a>
         </li>
         {% endfor %}
+        <li>
+            <a href="#"
+               hx-get="/library/shares"
+               hx-target="#tab-content"
+               hx-push-url="/?tab=shares">
+                Partages réseau
+            </a>
+        </li>
     </ul>
 </nav>
 <div id="tab-content"
@@ -20,4 +28,23 @@
      hx-trigger="load">
     Chargement…
 </div>
+
+<section>
+    <h2>Réglages</h2>
+    <p>
+        <a href="/settings/export"
+           onclick="return confirm('Le fichier exporté contient les mots de passe SMB et clés API en clair. Conservez-le en lieu sûr.');">
+            Exporter la configuration
+        </a>
+    </p>
+    <form method="post" action="/settings/import" enctype="multipart/form-data">
+        <label for="import-file">Importer une configuration</label>
+        <input id="import-file" type="file" name="file" accept="application/json" required>
+        <button type="submit">Importer</button>
+        <p><small>
+            Vide et remplace les dossiers de bibliothèque et partages réseau existants,
+            puis redémarre l'application.
+        </small></p>
+    </form>
+</section>
 {% endblock %}
