@@ -21,14 +21,38 @@ en lecture seule par `calibre-web` (indexation).
 - `HOST_LIBRARY_ROOT` : dossier hôte large monté dans `app` + les *arr +
   Jellyfin, sert de racine pour tout dossier ajouté depuis l'UI.
 - `SHARES_MOUNT` : dossier technique où l'app monte les partages SMB
-  ajoutés depuis l'UI (`mount -t cifs`), monté avec propagation `shared`.
+  ajoutés depuis l'UI (`mount -t cifs`), monté avec propagation `shared`
+  côté `app` et `rslave` côté *arr/Jellyfin (pour qu'un mount créé après le
+  démarrage des conteneurs — cas normal via l'UI — leur soit bien propagé).
+
+`HOST_LIBRARY_ROOT` et `SHARES_MOUNT` sont uniquement des variables **hôte**,
+consommées par `docker-compose.yml` (interpolation `${...}`, résolue avant le
+démarrage des conteneurs) et par `install.sh` — jamais injectées dans
+l'environnement du conteneur `app` (le service `app` liste explicitement ses
+propres variables sous `environment:` dans `docker-compose.yml`, sans
+`env_file: .env`) ni lues par l'appli Python. Elles ne doivent surtout pas
+devenir des champs `Settings` : `pydantic-settings` est case-insensitive, un
+champ `shares_mount`/`host_library_root` serait écrasé par la valeur hôte
+(chemins fixes côté conteneur, définis en constantes dans `app/config.py`).
+
+Si vous copiez `.env.example` sans passer par `install.sh`, remplissez
+`HOST_LIBRARY_ROOT`/`SHARES_MOUNT` vous-même — laissés vides, `docker compose
+up` échoue avec un message peu clair (source de bind mount vide).
+
+Le fichier `.env` lui-même est aussi bind-monté (lecture-écriture) dans `app`
+à `/app/.env` : `POST /settings/import` réécrit ce fichier et redémarre
+l'appli pour le recharger — sans ce bind mount, l'écriture serait perdue au
+redémarrage du conteneur (couche éphémère).
 
 ## Build multi-architecture
 - `docker buildx build --platform linux/arm64` pour produire l'image depuis
   une machine x86 (évite de builder directement sur le Pi, lent)
-- Image de l'appli maison en Alpine, multi-stage, nettoyée, utilisateur
-  non-root, `HEALTHCHECK` sur `/health` (cf. ADR 0003) — vise < 150 Mo,
-  mesurée à 99 Mo
+- Image de l'appli maison en Alpine, multi-stage, nettoyée,
+  `HEALTHCHECK` sur `/health` (cf. ADR 0003) — vise < 150 Mo, mesurée à 99 Mo.
+  Le conteneur `app` tourne en root (`CAP_SYS_ADMIN` requis pour
+  `mount -t cifs`/`umount` des partages SMB, cf. ADR 0005) — l'utilisateur
+  non-root visé par ADR 0003 ne s'applique plus à ce service précis, voir le
+  correctif du 2026-08-20 dans cette ADR
 - Images officielles conservées pour Jellyfin/*arr (pas de ré-empaquetage)
 
 ## Mise à jour
@@ -127,6 +151,33 @@ Contraintes :
 - Écrire les logs d'install dans un fichier pour diagnostiquer un échec sans
   devoir tout relancer
 - Un `uninstall.sh` symétrique est un bon complément, pas obligatoire en v1
+
+## Dépannage : propagation des partages SMB
+
+Pour que `propagation: shared`/`rslave` fonctionne (mount créé côté `app`
+après l'ajout d'un partage depuis l'UI, visible dans les *arr/Jellyfin sans
+redémarrage), le point de montage source du bind (`${SHARES_MOUNT}`, un
+simple `mkdir -p` fait par `install.sh`) doit appartenir à un *peer group*
+partagé côté hôte. Sur la plupart des distributions Linux récentes avec
+systemd, `/` est déjà monté `rshared` par défaut et ça fonctionne sans rien
+faire de plus. Si ce n'est pas le cas sur votre hôte (mounts créés depuis
+l'UI qui n'apparaissent pas dans les *arr/Jellyfin sans `docker compose
+restart`), vérifiez la propagation de `/` :
+
+```
+findmnt -o TARGET,PROPAGATION /
+```
+
+Si elle n'affiche pas `shared`, rendez le point de montage partagé
+manuellement avant `docker compose up` :
+
+```
+sudo mount --make-rshared /
+```
+
+`install.sh` ne l'automatise pas dans cette itération (pas de mount
+bind-sur-lui-même supplémentaire) — cette étape reste manuelle si votre hôte
+ne l'a pas déjà par défaut.
 
 ## Répartition de charge (si Pi saturé)
 - Déporter les *arr sur une seconde machine (NAS, mini-PC) ; le Pi garde

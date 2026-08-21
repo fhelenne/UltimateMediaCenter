@@ -40,7 +40,8 @@ composants qu'on ne maintient pas.
   ```
 - `--no-cache` sur apk, `--no-cache-dir` sur pip : pas de cache résiduel dans
   les layers
-- Utilisateur non-root dans le conteneur final
+- Utilisateur non-root dans le conteneur final — **révisé par ADR 0005** pour
+  le service `app` (voir « Correctif » ci-dessous)
 - `.dockerignore` complet (tests, docs, `.git`) pour ne pas polluer le contexte
   de build
 
@@ -66,3 +67,18 @@ capable — impose Raspberry Pi OS 64 bits comme pré-requis (cf.
 Le support armv7 n'est pas exclu définitivement, mais nécessiterait de
 rouvrir cette décision (toolchain Rust cross-compilée dans le stage builder)
 si un besoin concret apparaît.
+
+## Correctif (2026-08-20) — utilisateur non-root partiellement abandonné pour `app`
+
+ADR 0005 (gestion SMB depuis l'UI) exige que le conteneur `app` puisse monter/
+démonter des partages CIFS (`mount -t cifs`, `umount`) sur des chemins du
+bind mount `/library-root`, ce qui nécessite `CAP_SYS_ADMIN` et s'exécute
+en pratique en root dans ce conteneur (Task 6). Le `USER app` prévu par
+cette ADR a donc été retiré du `Dockerfile` pour le service `app` — ADR 0005
+supersède partiellement ADR 0003 sur ce point précis.
+
+Les autres bonnes pratiques de cette ADR (build multi-stage, nettoyage
+`apk`/`pip`, image Alpine, `.dockerignore`) restent inchangées et s'appliquent
+toujours. Les images tierces (*arr, Jellyfin) ne sont pas concernées, elles
+tournaient déjà avec `PUID`/`PGID` non-root fournis par leurs images
+officielles.
