@@ -94,11 +94,26 @@ async def apply_import(db_path: str, data: dict) -> dict:
     errors: list[str] = []
 
     env = {k: v for k, v in data.get("env", {}).items() if k not in _EXCLUDED_ENV_KEYS}
-    _write_env(env)
+    try:
+        _write_env(env)
+        env_written = True
+    except OSError as exc:
+        env_written = False
+        errors.append(f"écriture .env échouée: {exc}")
+
+    # La spec impose de vider library_folders/smb_shares avant restauration
+    # (import = remplacement complet, pas fusion).
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DELETE FROM library_folders")
+        conn.execute("DELETE FROM smb_shares")
 
     folders_restored = 0
     for entry in data.get("library_folders", []):
-        result = await library_folders.add_folder(db_path, entry["arr"], entry["path"])
+        try:
+            result = await library_folders.add_folder(db_path, entry["arr"], entry["path"])
+        except (sqlite3.IntegrityError, KeyError) as exc:
+            errors.append(f"dossier non restauré: {entry} ({exc})")
+            continue
         if result is None:
             errors.append(f"dossier non restauré: {entry['arr']} {entry['path']}")
         else:
@@ -106,16 +121,20 @@ async def apply_import(db_path: str, data: dict) -> dict:
 
     shares_restored = 0
     for entry in data.get("smb_shares", []):
-        result = await library_shares.add_share(
-            db_path, entry["slug"], entry["server"], entry["share"], entry["username"], entry["password"]
-        )
+        try:
+            result = await library_shares.add_share(
+                db_path, entry["slug"], entry["server"], entry["share"], entry["username"], entry["password"]
+            )
+        except (sqlite3.IntegrityError, KeyError) as exc:
+            errors.append(f"partage non restauré: {entry} ({exc})")
+            continue
         if result is None:
             errors.append(f"partage non restauré: {entry['slug']}")
         else:
             shares_restored += 1
 
     return {
-        "env_written": True,
+        "env_written": env_written,
         "folders_restored": folders_restored,
         "shares_restored": shares_restored,
         "errors": errors,

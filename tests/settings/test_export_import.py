@@ -90,3 +90,89 @@ async def test_apply_import_writes_env_and_restores_folders_and_shares(db_path, 
     content = env_path.read_text()
     assert "SONARR_API_KEY=new-key" in content
     assert "SESSION_SECRET=keep-me" in content  # jamais touché
+
+
+async def test_apply_import_wipes_existing_folders_and_shares_before_restoring(db_path, tmp_path, monkeypatch):
+    """Regression test for finding C4: the spec says import EMPTIES
+    library_folders/smb_shares before restoring — apply_import must not just append
+    on top of whatever was already there."""
+    env_path = tmp_path / ".env"
+    env_path.write_text("SONARR_API_KEY=old\n")
+    monkeypatch.setattr(export_import, "ENV_PATH", str(env_path))
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO library_folders (arr, path, root_folder_id, created_at) VALUES (?, ?, ?, ?)",
+            ("sonarr", "/library-root/old-tv", "old-root", time.time()),
+        )
+        conn.execute(
+            "INSERT INTO smb_shares (slug, server, share, username, password, mounted, created_at) "
+            "VALUES (?, ?, ?, ?, ?, 1, ?)",
+            ("old-nas", "s", "sh", "u", "p", time.time()),
+        )
+
+    payload = {
+        "version": 1,
+        "env": {},
+        "library_folders": [{"arr": "sonarr", "path": "/library-root/tv"}],
+        "smb_shares": [],
+    }
+    with patch("app.library.rootfolder.add_root_folder", AsyncMock(return_value="new-root")):
+        result = await export_import.apply_import(db_path, payload)
+
+    assert result["folders_restored"] == 1
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        remaining_folders = [r["path"] for r in conn.execute("SELECT path FROM library_folders").fetchall()]
+        remaining_shares = conn.execute("SELECT slug FROM smb_shares").fetchall()
+    assert remaining_folders == ["/library-root/tv"]
+    assert remaining_shares == []
+
+
+async def test_apply_import_reports_integrity_errors_instead_of_crashing(db_path, tmp_path, monkeypatch):
+    """Regression test for finding C4: a duplicate (arr, path) / slug in the import
+    payload must be reported as an error, not raise an uncaught IntegrityError (500)."""
+    env_path = tmp_path / ".env"
+    env_path.write_text("")
+    monkeypatch.setattr(export_import, "ENV_PATH", str(env_path))
+
+    payload = {
+        "version": 1,
+        "env": {},
+        "library_folders": [
+            {"arr": "sonarr", "path": "/library-root/tv"},
+            {"arr": "sonarr", "path": "/library-root/tv"},
+        ],
+        "smb_shares": [],
+    }
+
+    async def fake_add_folder(db_path, arr, path):
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                "INSERT INTO library_folders (arr, path, root_folder_id, created_at) VALUES (?, ?, ?, ?)",
+                (arr, path, "1", time.time()),
+            )
+        return {"id": 1}
+
+    with patch("app.library.folders.add_folder", fake_add_folder):
+        result = await export_import.apply_import(db_path, payload)
+
+    assert result["folders_restored"] == 1
+    assert len(result["errors"]) == 1
+    assert "dossier non restauré" in result["errors"][0]
+
+
+async def test_apply_import_env_written_reflects_write_failure(db_path, monkeypatch):
+    """Regression test for M5: env_written must reflect the real outcome of
+    _write_env, not be hardcoded to True."""
+
+    def failing_write_env(env):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(export_import, "_write_env", failing_write_env)
+
+    payload = {"version": 1, "env": {}, "library_folders": [], "smb_shares": []}
+    result = await export_import.apply_import(db_path, payload)
+
+    assert result["env_written"] is False
+    assert any("écriture .env échouée" in e for e in result["errors"])
