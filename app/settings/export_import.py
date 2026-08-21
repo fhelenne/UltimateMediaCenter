@@ -1,4 +1,3 @@
-import os
 import sqlite3
 import time
 
@@ -76,10 +75,11 @@ def _write_env(env: dict) -> None:
         if key not in written_keys and key not in _EXCLUDED_ENV_KEYS:
             lines.append(f"{key}={value}")
 
-    tmp_path = f"{ENV_PATH}.tmp"
-    with open(tmp_path, "w") as f:
+    # ENV_PATH is bind-mounted from the host in docker-compose.yml so the
+    # import survives a container restart — os.replace (atomic rename)
+    # returns EBUSY on a bind-mounted file, so we write in place instead.
+    with open(ENV_PATH, "w") as f:
         f.write("\n".join(lines) + "\n")
-    os.replace(tmp_path, ENV_PATH)
 
 
 async def apply_import(db_path: str, data: dict) -> dict:

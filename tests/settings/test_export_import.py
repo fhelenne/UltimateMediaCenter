@@ -92,6 +92,31 @@ async def test_apply_import_writes_env_and_restores_folders_and_shares(db_path, 
     assert "SESSION_SECRET=keep-me" in content  # jamais touché
 
 
+async def test_write_env_works_when_containing_directory_is_not_writable(tmp_path, monkeypatch):
+    """Regression test: ENV_PATH is bind-mounted from the host in
+    docker-compose.yml, and os.replace (atomic rename) returns EBUSY on a
+    bind-mounted file. Simulated here by making the parent directory
+    non-writable (rename needs dir write perm; truncating an existing file
+    in place only needs write perm on the file itself) — _write_env must
+    write in place, not rename a temp file over ENV_PATH."""
+    import os
+    import stat
+
+    env_dir = tmp_path / "envdir"
+    env_dir.mkdir()
+    env_path = env_dir / ".env"
+    env_path.write_text("SONARR_API_KEY=old\n")
+    monkeypatch.setattr(export_import, "ENV_PATH", str(env_path))
+
+    os.chmod(env_dir, stat.S_IRUSR | stat.S_IXUSR)  # r-x, no write on dir
+    try:
+        export_import._write_env({"SONARR_API_KEY": "new-key"})
+    finally:
+        os.chmod(env_dir, stat.S_IRWXU)  # restore so tmp_path cleanup works
+
+    assert "SONARR_API_KEY=new-key" in env_path.read_text()
+
+
 async def test_apply_import_wipes_existing_folders_and_shares_before_restoring(db_path, tmp_path, monkeypatch):
     """Regression test for finding C4: the spec says import EMPTIES
     library_folders/smb_shares before restoring — apply_import must not just append
