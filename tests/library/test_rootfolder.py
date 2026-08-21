@@ -10,8 +10,6 @@ from app.library import rootfolder
     [
         ("sonarr", "http://sonarr-test:8989", "v3"),
         ("radarr", "http://radarr-test:7878", "v3"),
-        ("lidarr", "http://lidarr-test:8686", "v1"),
-        ("readarr", "http://readarr-test:8787", "v1"),
     ],
 )
 @respx.mock
@@ -21,6 +19,49 @@ async def test_add_root_folder_returns_id(arr, base_url, api_version):
     )
     result = await rootfolder.add_root_folder(arr, "/library-root/x")
     assert result == "7"
+
+
+@pytest.mark.parametrize(
+    "arr,base_url",
+    [
+        ("lidarr", "http://lidarr-test:8686"),
+        ("readarr", "http://readarr-test:8787"),
+    ],
+)
+@respx.mock
+async def test_add_root_folder_includes_default_profiles_for_v1_arrs(arr, base_url):
+    """Regression test: lidarr/readarr's rootfolder endpoint (unlike
+    sonarr/radarr) requires Name + a non-zero DefaultMetadataProfileId +
+    DefaultQualityProfileId, or it 400s. add_root_folder must fetch the
+    first available profile of each kind and include them."""
+    respx.get(f"{base_url}/api/v1/metadataprofile").mock(
+        return_value=httpx.Response(200, json=[{"id": 1, "name": "Standard"}, {"id": 2, "name": "None"}])
+    )
+    respx.get(f"{base_url}/api/v1/qualityprofile").mock(
+        return_value=httpx.Response(200, json=[{"id": 1, "name": "eBook"}, {"id": 2, "name": "Spoken"}])
+    )
+    post_route = respx.post(f"{base_url}/api/v1/rootfolder").mock(
+        return_value=httpx.Response(201, json={"id": 7, "path": "/books-library"})
+    )
+    result = await rootfolder.add_root_folder(arr, "/books-library")
+    assert result == "7"
+    sent = post_route.calls.last.request.content
+    import json as _json
+
+    body = _json.loads(sent)
+    assert body["path"] == "/books-library"
+    assert body["name"]
+    assert body["defaultMetadataProfileId"] == 1
+    assert body["defaultQualityProfileId"] == 1
+
+
+@respx.mock
+async def test_add_root_folder_v1_returns_none_when_no_profiles_exist():
+    respx.get("http://readarr-test:8787/api/v1/metadataprofile").mock(
+        return_value=httpx.Response(200, json=[])
+    )
+    result = await rootfolder.add_root_folder("readarr", "/books-library")
+    assert result is None
 
 
 @respx.mock
