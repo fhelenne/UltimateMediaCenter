@@ -1,0 +1,24 @@
+<div id="browse-{{ arr }}">
+  {% if error %}<p class="error">Erreur : impossible de lister ce dossier côté {{ arr }}.</p>{% endif %}
+  <p>Chemin actuel : <code>{{ path }}</code></p>
+  <ul>
+    {% if parent is not none %}
+    <li>
+      <button hx-get="/library/{{ arr }}/browse?path={{ parent | urlencode }}" hx-target="#browse-{{ arr }}" hx-swap="outerHTML">
+        .. (remonter)
+      </button>
+    </li>
+    {% endif %}
+    {% for d in directories %}
+    <li>
+      <button hx-get="/library/{{ arr }}/browse?path={{ d.path | urlencode }}" hx-target="#browse-{{ arr }}" hx-swap="outerHTML">
+        {{ d.name }}
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+  <form hx-post="/library/{{ arr }}/folders" hx-target="#library-{{ arr }}" hx-swap="outerHTML">
+    <input type="hidden" name="path" value="{{ path }}">
+    <button type="submit">Utiliser ce dossier ({{ path }})</button>
+  </form>
+</div>

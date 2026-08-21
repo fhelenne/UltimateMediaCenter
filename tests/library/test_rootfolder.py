@@ -48,3 +48,33 @@ async def test_remove_root_folder_false_on_http_error():
     )
     result = await rootfolder.remove_root_folder("lidarr", "3")
     assert result is False
+
+
+@respx.mock
+async def test_browse_returns_directory_list():
+    respx.get("http://readarr-test:8787/api/v1/filesystem", params={"path": "/"}).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "directories": [
+                    {"path": "/books-library/", "name": "books-library"},
+                    {"path": "/library-root/", "name": "library-root"},
+                ],
+                "files": [{"path": "/config.xml", "name": "config.xml"}],
+            },
+        )
+    )
+    result = await rootfolder.browse("readarr", "/")
+    assert result == [
+        {"path": "/books-library/", "name": "books-library"},
+        {"path": "/library-root/", "name": "library-root"},
+    ]
+
+
+@respx.mock
+async def test_browse_returns_none_on_http_error():
+    respx.get("http://sonarr-test:8989/api/v3/filesystem", params={"path": "/"}).mock(
+        side_effect=httpx.TimeoutException("timeout")
+    )
+    result = await rootfolder.browse("sonarr", "/")
+    assert result is None

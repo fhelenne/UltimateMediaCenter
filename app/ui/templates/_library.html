@@ -10,9 +10,5 @@
     </li>
     {% endfor %}
   </ul>
-  <form hx-post="/library/{{ arr }}/folders" hx-target="#library-{{ arr }}" hx-swap="outerHTML">
-    <input type="text" name="path" placeholder="{{ host_library_root }}/..." required>
-    <small>Doit commencer par <code>{{ host_library_root }}</code> (ton dossier racine configuré).</small>
-    <button type="submit">Ajouter</button>
-  </form>
+  <div hx-get="/library/{{ arr }}/browse" hx-trigger="load" hx-swap="outerHTML" id="browse-{{ arr }}"></div>
 </div>

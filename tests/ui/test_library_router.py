@@ -28,16 +28,6 @@ async def test_library_list_requires_login(client):
     assert resp.status_code in (303, 204)
 
 
-async def test_library_list_shows_expected_root_hint(logged_in_client):
-    """The form must tell the user which container path prefix is accepted
-    (HOST_LIBRARY_ROOT), since a raw host path like ~/foo is meaningless
-    inside the container and gets silently rejected otherwise."""
-    from app.config import HOST_LIBRARY_ROOT
-
-    resp = await logged_in_client.get("/library/sonarr")
-    assert HOST_LIBRARY_ROOT in resp.text
-
-
 async def test_library_list_renders_folders(logged_in_client):
     with patch("app.library.folders.list_folders", return_value=[
         {"id": 1, "arr": "sonarr", "path": "/library-root/tv", "root_folder_id": "1", "created_at": 0}
@@ -45,6 +35,42 @@ async def test_library_list_renders_folders(logged_in_client):
         resp = await logged_in_client.get("/library/sonarr")
     assert resp.status_code == 200
     assert "/library-root/tv" in resp.text
+
+
+async def test_browse_root_lists_directories(logged_in_client):
+    with patch(
+        "app.library.rootfolder.browse",
+        AsyncMock(return_value=[{"path": "/books-library/", "name": "books-library"}]),
+    ):
+        resp = await logged_in_client.get("/library/readarr/browse")
+    assert resp.status_code == 200
+    assert "books-library" in resp.text
+    assert "(remonter)" not in resp.text  # root has no parent to go up to
+
+
+async def test_browse_subpath_shows_parent_link(logged_in_client):
+    with patch("app.library.rootfolder.browse", AsyncMock(return_value=[])):
+        resp = await logged_in_client.get("/library/readarr/browse", params={"path": "/books-library/sub"})
+    assert resp.status_code == 200
+    assert "(remonter)" in resp.text
+
+
+async def test_browse_shows_error_on_failure(logged_in_client):
+    with patch("app.library.rootfolder.browse", AsyncMock(return_value=None)):
+        resp = await logged_in_client.get("/library/readarr/browse")
+    assert resp.status_code == 200
+    assert "erreur" in resp.text.lower()
+
+
+async def test_browse_use_this_folder_form_targets_current_path(logged_in_client):
+    with patch("app.library.rootfolder.browse", AsyncMock(return_value=[])):
+        resp = await logged_in_client.get("/library/readarr/browse", params={"path": "/books-library"})
+    assert 'value="/books-library"' in resp.text
+
+
+async def test_browse_rejects_unknown_arr(logged_in_client):
+    resp = await logged_in_client.get("/library/unknown/browse")
+    assert resp.status_code == 404
 
 
 async def test_add_folder_success(logged_in_client):
@@ -60,36 +86,38 @@ async def test_add_folder_failure_shows_error(logged_in_client):
     assert "erreur" in resp.text.lower()
 
 
-async def test_add_folder_rejects_path_outside_host_library_root(logged_in_client):
-    """Regression test for finding I3: a folder must be a sub-path of
-    HOST_LIBRARY_ROOT (or SHARES_MOUNT), rejected otherwise before any add_folder call."""
+async def test_add_folder_rejects_non_absolute_path(logged_in_client):
+    """Paths now come from the *arr's own filesystem browse API (each *arr
+    sees its own mounts, e.g. /books-library for readarr, which isn't under
+    HOST_LIBRARY_ROOT) — the app no longer restricts to a fixed local
+    prefix, it just guards against an obviously malformed relative path."""
     with patch("app.library.folders.add_folder", AsyncMock(return_value={"id": 1})) as mock_add:
-        resp = await logged_in_client.post("/library/sonarr/folders", data={"path": "/etc/passwd"})
+        resp = await logged_in_client.post("/library/sonarr/folders", data={"path": "relative/path"})
     assert resp.status_code == 400
     mock_add.assert_not_awaited()
-    # Regression test: the 400 response must still be the full _library.html
-    # fragment (id preserved for future hx-target swaps) with a visible,
-    # actionable error message — a bare-text 400 response is invisible in
-    # the browser because HTMX only swaps 2xx/3xx by default, and it also
-    # destroys the target's id on an outerHTML swap, breaking every future
-    # action on that tab.
+    # the 400 response must still be the full _library.html fragment (id
+    # preserved for future hx-target swaps) with a visible error message —
+    # HTMX only swaps 2xx/3xx by default without the responseHandling
+    # override in base.html, so this also guards that config.
     assert 'id="library-sonarr"' in resp.text
     assert "erreur" in resp.text.lower()
 
 
-async def test_add_folder_rejects_path_traversal_out_of_host_library_root(logged_in_client):
+async def test_add_folder_normalizes_path_traversal(logged_in_client):
     with patch("app.library.folders.add_folder", AsyncMock(return_value={"id": 1})) as mock_add:
         resp = await logged_in_client.post(
-            "/library/sonarr/folders", data={"path": "/library-root/../etc"}
+            "/library/sonarr/folders", data={"path": "/books-library/../books-library/sub"}
         )
-    assert resp.status_code == 400
-    mock_add.assert_not_awaited()
+    assert resp.status_code == 200
+    assert mock_add.await_args.args[1:] == ("sonarr", "/books-library/sub")
 
 
-async def test_add_folder_accepts_shares_mount_subpath(logged_in_client):
+async def test_add_folder_accepts_arr_native_path(logged_in_client):
+    """A path outside HOST_LIBRARY_ROOT is fine now — e.g. readarr's own
+    pre-existing /books-library mount, which the browse API surfaces."""
     with patch("app.library.folders.add_folder", AsyncMock(return_value={"id": 1})) as mock_add:
         resp = await logged_in_client.post(
-            "/library/sonarr/folders", data={"path": "/library-root/shares/nas"}
+            "/library/readarr/folders", data={"path": "/books-library"}
         )
     assert resp.status_code == 200
     mock_add.assert_awaited_once()

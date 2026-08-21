@@ -10,9 +10,10 @@ from fastapi.templating import Jinja2Templates
 
 from app.arr import lidarr, radarr, readarr, sonarr
 from app.auth.router import require_login
-from app.config import HOST_LIBRARY_ROOT, SHARES_MOUNT, settings
+from app.config import HOST_LIBRARY_ROOT, settings
 from app.jellyfin import client as jellyfin
 from app.library import folders as library_folders
+from app.library import rootfolder as library_rootfolder
 from app.library import shares as library_shares
 from app.rematch import rematch
 
@@ -220,13 +221,28 @@ async def library_list(
     )
 
 
-def _under_allowed_root(path: str) -> bool:
+@router.get("/library/{arr}/browse", response_class=HTMLResponse)
+async def library_browse(
+    request: Request, arr: str, path: str = "/", user: dict = Depends(require_login)
+) -> HTMLResponse:
+    if arr not in _CLIENTS:
+        return HTMLResponse("Not found", status_code=404)
     normalized = os.path.normpath(path)
-    for root in (HOST_LIBRARY_ROOT, SHARES_MOUNT):
-        root = root.rstrip("/")
-        if normalized == root or normalized.startswith(root + "/"):
-            return True
-    return False
+    directories = await library_rootfolder.browse(arr, normalized)
+    parent = os.path.dirname(normalized.rstrip("/")) or None
+    if normalized in ("/", ""):
+        parent = None
+    return templates.TemplateResponse(
+        request,
+        "_browse.html",
+        {
+            "arr": arr,
+            "path": normalized,
+            "parent": parent,
+            "directories": directories or [],
+            "error": directories is None,
+        },
+    )
 
 
 @router.post("/library/{arr}/folders", response_class=HTMLResponse)
@@ -236,7 +252,7 @@ async def library_add_folder(
     if arr not in _CLIENTS:
         return HTMLResponse("Not found", status_code=404)
     normalized = os.path.normpath(path)
-    if not _under_allowed_root(normalized):
+    if not normalized.startswith("/"):
         items = library_folders.list_folders(settings.db_path, arr)
         return templates.TemplateResponse(
             request,
@@ -245,7 +261,7 @@ async def library_add_folder(
                 "arr": arr,
                 "folders": items,
                 "error": True,
-                "error_message": f"Erreur : le dossier doit être un sous-chemin de {HOST_LIBRARY_ROOT}.",
+                "error_message": "Erreur : chemin invalide.",
                 "host_library_root": HOST_LIBRARY_ROOT,
             },
             status_code=400,

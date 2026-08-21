@@ -47,6 +47,25 @@ async def add_root_folder(arr: str, path: str) -> str | None:
     return str(data["id"])
 
 
+async def browse(arr: str, path: str) -> list[dict] | None:
+    base_url = _URL[arr]()
+    api_version = _API_VERSION[arr]
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{base_url}/api/{api_version}/filesystem",
+                headers={"X-Api-Key": _API_KEY[arr]()},
+                params={"path": path},
+                timeout=5.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError as exc:
+        logger.error(f"{arr} browse failed", extra={"error": str(exc), "path": path})
+        return None
+    return [{"path": d["path"], "name": d["name"]} for d in data.get("directories", [])]
+
+
 async def remove_root_folder(arr: str, root_folder_id: str) -> bool:
     base_url = _URL[arr]()
     api_version = _API_VERSION[arr]
