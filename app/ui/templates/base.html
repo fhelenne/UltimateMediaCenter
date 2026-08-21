@@ -6,6 +6,14 @@
     <title>UltimateMediaCenter</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+    <!-- HTMX only swaps 2xx/3xx responses by default: a 4xx/5xx error
+         response (e.g. form validation failures) would otherwise never
+         reach the DOM, making the error look like nothing happened. -->
+    <meta name="htmx-config" content='{"responseHandling":[
+        {"code":"204", "swap": false},
+        {"code":"[23]..", "swap": true},
+        {"code":"[45]..", "swap": true, "error": true}
+    ]}'>
 </head>
 <body>
     <form method="post" action="/auth/logout" style="text-align: right; margin: 0.5rem 0;">

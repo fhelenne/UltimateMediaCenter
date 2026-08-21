@@ -161,10 +161,20 @@ async def shares_add(
     user: dict = Depends(require_login),
 ) -> HTMLResponse:
     if not _SLUG_RE.match(slug):
-        return HTMLResponse("Nom de partage invalide", status_code=400)
+        items = library_shares.list_shares(settings.db_path)
+        return templates.TemplateResponse(
+            request,
+            "_shares.html",
+            {"shares": items, "error": True, "error_message": "Erreur : nom de partage invalide (lettres/chiffres/-/_ uniquement)."},
+            status_code=400,
+        )
     if "," in server or "," in share or "," in username:
-        return HTMLResponse(
-            "Virgule interdite dans serveur/partage/utilisateur", status_code=400
+        items = library_shares.list_shares(settings.db_path)
+        return templates.TemplateResponse(
+            request,
+            "_shares.html",
+            {"shares": items, "error": True, "error_message": "Erreur : virgule interdite dans serveur/partage/utilisateur."},
+            status_code=400,
         )
     result = await library_shares.add_share(settings.db_path, slug, server, share, username, password)
     items = library_shares.list_shares(settings.db_path)
@@ -179,7 +189,13 @@ async def shares_remove(
 ) -> HTMLResponse:
     result = await library_shares.remove_share(settings.db_path, share_id)
     if result is None:
-        return HTMLResponse("Partage encore utilisé par un dossier", status_code=400)
+        items = library_shares.list_shares(settings.db_path)
+        return templates.TemplateResponse(
+            request,
+            "_shares.html",
+            {"shares": items, "error": True, "error_message": "Erreur : partage encore utilisé par un dossier."},
+            status_code=400,
+        )
     items = library_shares.list_shares(settings.db_path)
     if result is False:
         return templates.TemplateResponse(
@@ -198,7 +214,9 @@ async def library_list(
         return HTMLResponse("Not found", status_code=404)
     items = library_folders.list_folders(settings.db_path, arr)
     return templates.TemplateResponse(
-        request, "_library.html", {"arr": arr, "folders": items, "error": False}
+        request,
+        "_library.html",
+        {"arr": arr, "folders": items, "error": False, "host_library_root": HOST_LIBRARY_ROOT},
     )
 
 
@@ -219,13 +237,25 @@ async def library_add_folder(
         return HTMLResponse("Not found", status_code=404)
     normalized = os.path.normpath(path)
     if not _under_allowed_root(normalized):
-        return HTMLResponse(
-            f"Le dossier doit être un sous-chemin de {HOST_LIBRARY_ROOT}", status_code=400
+        items = library_folders.list_folders(settings.db_path, arr)
+        return templates.TemplateResponse(
+            request,
+            "_library.html",
+            {
+                "arr": arr,
+                "folders": items,
+                "error": True,
+                "error_message": f"Erreur : le dossier doit être un sous-chemin de {HOST_LIBRARY_ROOT}.",
+                "host_library_root": HOST_LIBRARY_ROOT,
+            },
+            status_code=400,
         )
     result = await library_folders.add_folder(settings.db_path, arr, normalized)
     items = library_folders.list_folders(settings.db_path, arr)
     return templates.TemplateResponse(
-        request, "_library.html", {"arr": arr, "folders": items, "error": result is None}
+        request,
+        "_library.html",
+        {"arr": arr, "folders": items, "error": result is None, "host_library_root": HOST_LIBRARY_ROOT},
     )
 
 
@@ -238,5 +268,7 @@ async def library_remove_folder(
     success = await library_folders.remove_folder(settings.db_path, folder_id)
     items = library_folders.list_folders(settings.db_path, arr)
     return templates.TemplateResponse(
-        request, "_library.html", {"arr": arr, "folders": items, "error": not success}
+        request,
+        "_library.html",
+        {"arr": arr, "folders": items, "error": not success, "host_library_root": HOST_LIBRARY_ROOT},
     )

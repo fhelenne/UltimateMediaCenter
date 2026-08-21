@@ -1,5 +1,5 @@
 <div id="shares-list">
-  {% if error %}<p class="error">Erreur lors de l'opération sur le partage.</p>{% endif %}
+  {% if error %}<p class="error">{{ error_message or "Erreur lors de l'opération sur le partage." }}</p>{% endif %}
   <ul>
     {% for s in shares %}
     <li>

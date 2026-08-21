@@ -28,6 +28,16 @@ async def test_library_list_requires_login(client):
     assert resp.status_code in (303, 204)
 
 
+async def test_library_list_shows_expected_root_hint(logged_in_client):
+    """The form must tell the user which container path prefix is accepted
+    (HOST_LIBRARY_ROOT), since a raw host path like ~/foo is meaningless
+    inside the container and gets silently rejected otherwise."""
+    from app.config import HOST_LIBRARY_ROOT
+
+    resp = await logged_in_client.get("/library/sonarr")
+    assert HOST_LIBRARY_ROOT in resp.text
+
+
 async def test_library_list_renders_folders(logged_in_client):
     with patch("app.library.folders.list_folders", return_value=[
         {"id": 1, "arr": "sonarr", "path": "/library-root/tv", "root_folder_id": "1", "created_at": 0}
@@ -57,6 +67,14 @@ async def test_add_folder_rejects_path_outside_host_library_root(logged_in_clien
         resp = await logged_in_client.post("/library/sonarr/folders", data={"path": "/etc/passwd"})
     assert resp.status_code == 400
     mock_add.assert_not_awaited()
+    # Regression test: the 400 response must still be the full _library.html
+    # fragment (id preserved for future hx-target swaps) with a visible,
+    # actionable error message — a bare-text 400 response is invisible in
+    # the browser because HTMX only swaps 2xx/3xx by default, and it also
+    # destroys the target's id on an outerHTML swap, breaking every future
+    # action on that tab.
+    assert 'id="library-sonarr"' in resp.text
+    assert "erreur" in resp.text.lower()
 
 
 async def test_add_folder_rejects_path_traversal_out_of_host_library_root(logged_in_client):
@@ -111,6 +129,8 @@ async def test_shares_list_and_add_and_remove(logged_in_client):
     with patch("app.library.shares.remove_share", AsyncMock(return_value=None)):
         resp = await logged_in_client.delete("/library/shares/1")
     assert resp.status_code == 400
+    assert 'id="shares-list"' in resp.text
+    assert "erreur" in resp.text.lower()
 
 
 async def test_shares_remove_reports_error_when_umount_fails(logged_in_client):
@@ -132,6 +152,8 @@ async def test_shares_add_rejects_invalid_slug(logged_in_client):
         )
     assert resp.status_code == 400
     mock_add.assert_not_awaited()
+    assert 'id="shares-list"' in resp.text
+    assert "erreur" in resp.text.lower()
 
 
 async def test_shares_add_rejects_comma_in_server_share_or_username(logged_in_client):
@@ -144,3 +166,5 @@ async def test_shares_add_rejects_comma_in_server_share_or_username(logged_in_cl
         )
     assert resp.status_code == 400
     mock_add.assert_not_awaited()
+    assert 'id="shares-list"' in resp.text
+    assert "erreur" in resp.text.lower()

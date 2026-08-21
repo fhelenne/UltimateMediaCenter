@@ -1,5 +1,5 @@
 <div id="library-{{ arr }}">
-  {% if error %}<p class="error">Erreur lors de l'opération sur le dossier.</p>{% endif %}
+  {% if error %}<p class="error">{{ error_message or "Erreur lors de l'opération sur le dossier." }}</p>{% endif %}
   <ul>
     {% for f in folders %}
     <li>
@@ -11,7 +11,8 @@
     {% endfor %}
   </ul>
   <form hx-post="/library/{{ arr }}/folders" hx-target="#library-{{ arr }}" hx-swap="outerHTML">
-    <input type="text" name="path" placeholder="/library-root/..." required>
+    <input type="text" name="path" placeholder="{{ host_library_root }}/..." required>
+    <small>Doit commencer par <code>{{ host_library_root }}</code> (ton dossier racine configuré).</small>
     <button type="submit">Ajouter</button>
   </form>
 </div>
