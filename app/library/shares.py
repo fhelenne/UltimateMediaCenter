@@ -1,25 +1,32 @@
 import asyncio
 import logging
+import os
 import sqlite3
 import time
 
-from app.config import settings
+from app.config import SHARES_MOUNT
 
 logger = logging.getLogger(__name__)
 
 
 async def _mount(slug: str, server: str, share: str, username: str, password: str) -> bool:
-    target = f"{settings.shares_mount}/{slug}"
+    target = f"{SHARES_MOUNT}/{slug}"
     try:
-        process = await asyncio.create_subprocess_exec(
-            "mkdir", "-p", target,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-        )
-        await process.communicate()
+        os.makedirs(target, exist_ok=True)
+    except OSError as exc:
+        logger.error("smb mount target mkdir failed", extra={"slug": slug, "error": str(exc)})
+        return False
+    try:
+        # Mot de passe passé via la variable d'env PASSWD de mount.cifs, pas
+        # via -o password=... : évite l'injection d'options CIFS si le mot de
+        # passe contient une virgule, et évite la fuite en clair dans argv
+        # (visible via ps par tout utilisateur de l'hôte le temps du mount).
+        mount_env = {**os.environ, "PASSWD": password}
         process = await asyncio.create_subprocess_exec(
             "mount", "-t", "cifs", f"//{server}/{share}", target,
-            "-o", f"username={username},password={password},uid=1000,gid=1000",
+            "-o", f"username={username},uid=1000,gid=1000",
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            env=mount_env,
         )
         _, stderr = await process.communicate()
     except OSError as exc:
@@ -35,7 +42,7 @@ async def _mount(slug: str, server: str, share: str, username: str, password: st
 
 
 async def _umount(slug: str) -> bool:
-    target = f"{settings.shares_mount}/{slug}"
+    target = f"{SHARES_MOUNT}/{slug}"
     try:
         process = await asyncio.create_subprocess_exec(
             "umount", target,
@@ -52,12 +59,6 @@ async def _umount(slug: str) -> bool:
         )
         return False
     return True
-
-
-def _row_without_password(row: sqlite3.Row) -> dict:
-    data = dict(row)
-    data.pop("password", None)
-    return data
 
 
 def list_shares(db_path: str) -> list[dict]:

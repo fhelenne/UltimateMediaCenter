@@ -3,7 +3,38 @@ name: ultimatemediacenter
 services:
   app:
     build: .
-    env_file: .env
+    # Volontairement PAS d'env_file: .env ici. HOST_LIBRARY_ROOT et
+    # SHARES_MOUNT dans .env sont des chemins HÔTE, réservés à
+    # l'interpolation ${...} de ce fichier compose (résolue côté hôte avant
+    # même le démarrage des conteneurs) et à install.sh. env_file les
+    # injecterait aussi dans l'environnement du conteneur app, où
+    # pydantic-settings (case-insensitive) les ferait collisionner avec
+    # d'éventuels champs Settings homonymes — cf finding C1. Seules les
+    # variables réellement consommées par l'appli Python sont listées
+    # explicitement ci-dessous, lues depuis .env via l'interpolation
+    # compose normale.
+    environment:
+      - NTFY_URL=${NTFY_URL}
+      - NTFY_TOPIC=${NTFY_TOPIC}
+      - SONARR_URL=${SONARR_URL}
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      - SONARR_SECRET=${SONARR_SECRET}
+      - RADARR_URL=${RADARR_URL}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - RADARR_SECRET=${RADARR_SECRET}
+      - LIDARR_URL=${LIDARR_URL}
+      - LIDARR_API_KEY=${LIDARR_API_KEY}
+      - LIDARR_SECRET=${LIDARR_SECRET}
+      - READARR_URL=${READARR_URL}
+      - READARR_API_KEY=${READARR_API_KEY}
+      - READARR_SECRET=${READARR_SECRET}
+      - JELLYFIN_URL=${JELLYFIN_URL}
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - JELLYFIN_PUBLIC_URL=${JELLYFIN_PUBLIC_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - CACHE_TTL=${CACHE_TTL}
+      - DB_PATH=${DB_PATH}
+      - CALIBRE_LIBRARY_PATH=${CALIBRE_LIBRARY_PATH}
     depends_on:
       - ntfy
     cap_add:
@@ -19,6 +50,14 @@ services:
         target: /library-root/shares
         bind:
           propagation: shared
+      # Bind-mount du .env réel (celui lu par install.sh et par
+      # env_file/interpolation ci-dessus) dans le conteneur, au chemin que
+      # pydantic-settings et export_import.ENV_PATH résolvent (CWD=/app,
+      # cf Dockerfile WORKDIR). Sans ça, l'import de config (C3) réécrit un
+      # .env dans le layer éphémère du conteneur, jeté au redémarrage.
+      - type: bind
+        source: ./.env
+        target: /app/.env
     restart: unless-stopped
 
   calibre-web:
@@ -65,6 +104,8 @@ services:
       - type: bind
         source: ${SHARES_MOUNT}
         target: /library-root/shares
+        bind:
+          propagation: rslave
     restart: unless-stopped
 
   ntfy:
@@ -97,6 +138,8 @@ services:
       - type: bind
         source: ${SHARES_MOUNT}
         target: /library-root/shares
+        bind:
+          propagation: rslave
     restart: unless-stopped
 
   radarr:
@@ -117,6 +160,8 @@ services:
       - type: bind
         source: ${SHARES_MOUNT}
         target: /library-root/shares
+        bind:
+          propagation: rslave
     restart: unless-stopped
 
   lidarr:
@@ -137,6 +182,8 @@ services:
       - type: bind
         source: ${SHARES_MOUNT}
         target: /library-root/shares
+        bind:
+          propagation: rslave
     restart: unless-stopped
 
   readarr:
@@ -159,6 +206,8 @@ services:
       - type: bind
         source: ${SHARES_MOUNT}
         target: /library-root/shares
+        bind:
+          propagation: rslave
     restart: unless-stopped
 
 volumes:
