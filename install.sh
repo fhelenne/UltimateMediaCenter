@@ -282,7 +282,7 @@ seed_arr_webhooks() {
     existing=$(docker run --rm --network ultimatemediacenter_default alpine sh -c "
       wget -qO- --header='X-Api-Key: ${api_key}' http://${service}:${port}/api/${api_version}/notification
     " 2>/dev/null || true)
-    if echo "$existing" | grep -q '"name":"UltimateMediaCenter"'; then
+    if echo "$existing" | grep -q '"name": *"UltimateMediaCenter"'; then
       log "Webhook déjà enregistré dans ${service}, ignoré."
       continue
     fi
